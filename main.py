@@ -11,25 +11,25 @@ import psycopg2 as psycopg2
 from pywinauto import keyboard
 
 from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id
-from core import Sprut
-from tools.clipboard import clipboard_get
+from core import Sprut, Odines
+from tools.clipboard import clipboard_get, clipboard_set
 from tools.tg import tg_send
 from tools.web import Web
 
 months = [
-            'Январь',
-            'Февраль',
-            'Март',
-            'Апрель',
-            'Май',
-            'Июнь',
-            'Июль',
-            'Август',
-            'Сентябрь',
-            'Октябрь',
-            'Ноябрь',
-            'Декабрь'
-        ]
+    'Январь',
+    'Февраль',
+    'Март',
+    'Апрель',
+    'Май',
+    'Июнь',
+    'Июль',
+    'Август',
+    'Сентябрь',
+    'Октябрь',
+    'Ноябрь',
+    'Декабрь'
+]
 
 
 def sql_create_table():
@@ -433,6 +433,109 @@ def homebank(email, password):
     web.find_element("//td[@title = '31 августа 2023 г.']").click()
 
 
+def odines_part(days):
+
+    opened_table_selector = {"title": "", "class_name": "", "control_type": "Table", "visible_only": True,
+                             "enabled_only": True, "found_index": 0}
+    filter_selector = {"title": "Установить отбор и сортировку списка...", "class_name": "",
+                       "control_type": "Button",
+                       "visible_only": True, "enabled_only": True, "found_index": 0}
+    filter_whole_wnd_selector = {"title": "Отбор и сортировка", "class_name": "V8NewLocalFrameBaseWnd",
+                                 "control_type": "Window", "visible_only": True, "enabled_only": True,
+                                 "found_index": 0}
+
+    app = Odines()
+    app.run()
+
+    app.navigate("Банк и касса", "Отчет банка по операциям эквайринга", maximize_innder=True)
+
+    table_element = app.find_element(opened_table_selector)
+
+    app.find_element(filter_selector).click()
+
+    app.parent_switch(filter_whole_wnd_selector, resize=True)
+
+    time.sleep(1)
+
+    app.find_element({"title": "Пометка удаления", "class_name": "", "control_type": "CheckBox",
+                      "visible_only": True, "enabled_only": True, "found_index": 0}).click()
+    app.find_element({"title": "", "class_name": "", "control_type": "Edit",
+                      "visible_only": True, "enabled_only": True, "found_index": 3}).type_keys('Нет', app.keys.TAB,
+                                                                                               protect_first=True, clear=True,
+                                                                                               click=True)
+
+    app.find_element({"title": "Организация", "class_name": "", "control_type": "CheckBox",
+                      "visible_only": True, "enabled_only": True, "found_index": 0}).click()
+
+    app.find_element({"title": "", "class_name": "", "control_type": "Edit",
+                      "visible_only": True, "enabled_only": True, "found_index": 7}).type_keys('ТОО "Magnum Cash&Carry"', app.keys.TAB,
+                                                                                               protect_first=True, clear=True,
+                                                                                               click=True)
+
+    app.find_element({"title": "Контрагент", "class_name": "", "control_type": "CheckBox",
+                      "visible_only": True, "enabled_only": True, "found_index": 0}).click()
+
+    app.find_element({"title": "", "class_name": "", "control_type": "Edit",
+                      "visible_only": True, "enabled_only": True, "found_index": 37}).type_keys('Частное лицо- ОПТ', app.keys.TAB,
+                                                                                                protect_first=True, clear=True,
+                                                                                                click=True)
+
+    app.find_element({"title": "OK", "class_name": "", "control_type": "Button",
+                      "visible_only": True, "enabled_only": True, "found_index": 0}).click()
+
+    app.parent_back(1)
+
+    els = app.find_elements({"title_re": ".* Дата", "class_name": "", "control_type": "Custom",
+                             "visible_only": True, "enabled_only": True}, timeout=3)
+
+    for i in els:
+        # print(i)
+        clipboard_set("")
+        i.type_keys("^c", click=True, clear=False)
+
+        get_report_date = clipboard_get()
+        get_report_date = str(get_report_date).strip()[:10]
+        print(get_report_date)
+
+        if get_report_date in days:
+
+            i.click(double=True)
+
+            app.parent_switch({"title": "", "class_name": "", "control_type": "Pane",
+                               "visible_only": True, "enabled_only": True, "found_index": 34}, resize=True)
+
+            transactions = app.find_elements({"title_re": ".* Дата транзакции", "class_name": "", "control_type": "Custom",
+                                              "visible_only": True, "enabled_only": True}, timeout=5)
+
+            summs = app.find_elements({"title_re": ".* Сумма", "class_name": "", "control_type": "Custom",
+                                       "visible_only": True, "enabled_only": True}, timeout=5)
+            print(summs)
+            for ind, transaction in enumerate(transactions):
+
+                print('-------------------------------------------')
+                clipboard_set("")
+                transaction.type_keys("^c", click=True, clear=False)
+
+                transaction_date = clipboard_get()
+                transaction_date = str(transaction_date).strip()[:10]
+                print(f'Transaction {i}: {transaction_date}')
+
+                clipboard_set("")
+                print('Clicking on', summs[ind])
+                summs[ind].type_keys("^c", click=True, clear=False)
+
+                summ = clipboard_get()
+                summ = str(summ)
+                print('Sum:', summ)
+                print('-------------------------------------------')
+
+            app.find_element({"title": "Закрыть", "class_name": "", "control_type": "Button",
+                              "visible_only": True, "enabled_only": True, "found_index": 5}).click()
+            print('Finished')
+            # exit()
+            app.parent_back(1)
+
+
 if __name__ == '__main__':
 
     if True:
@@ -440,17 +543,29 @@ if __name__ == '__main__':
         sql_create_table()
 
         today = datetime.datetime.now().date()
-
+        today = datetime.date(2023, 8, 4)
         cashbook_day = (today - datetime.timedelta(days=5)).strftime('%d.%m.%Y')
+
+        days = []
+
+        for i in range(7, 1, -1):
+            day = (today - datetime.timedelta(days=i)).strftime('%d.%m.%Y')
+            days.append(day)
+
         today = today.strftime('%d.%m.%Y')
         print(today, cashbook_day)
-
-        homebank('mukhtarova@magnum.kz', 'Aa123456!')
+        print(days)
 
         # sprut = Sprut("REPS")
         # sprut.run()
 
         # open_cashbook(sprut, today)
+
+        # homebank('mukhtarova@magnum.kz', 'Aa123456!')
+
+        # odines_part()
+
+        odines_part(days)
 
     # except Exception as error:
     #     print('GOVNO', error)
