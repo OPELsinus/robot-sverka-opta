@@ -120,7 +120,11 @@ def get_all_data():
     return df1
 
 
-def open_cashbook(sprut, today):
+def open_cashbook(today):
+
+    sprut = Sprut("REPS")
+    sprut.run()
+
     sprut.open("Кассовая книга", switch=False)
 
     print('Switching')
@@ -292,126 +296,6 @@ def open_cashbook(sprut, today):
     # sprut.parent_back(1)
 
 
-def create_z_reports(sprut, branches, start_date, end_date):
-    sprut.open("Отчеты")
-
-    keyboard.send_keys("{F5}")
-
-    sprut.parent_switch({"title": "Поиск", "class_name": "Tvms_search_fm_builder", "control_type": "Window",
-                         "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-
-    sprut.find_element({"title": "Название отчета", "class_name": "TvmsComboBox", "control_type": "Pane",
-                        "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-
-    keyboard.send_keys("{UP}" * 4)
-    keyboard.send_keys("{ENTER}")
-    # sprut.find_element({"title": "", "class_name": "", "control_type": "ListItem",
-    #                     "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-
-    sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
-                        "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys('3303')
-
-    keyboard.send_keys("{ENTER}")
-
-    sprut.find_element({"title": "Перейти", "class_name": "TvmsBitBtn", "control_type": "Button",
-                        "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-
-    # ? ---------------------------------------------------------
-    # sprut.get_pane(1).type_keys(sprut.Keys.F9)
-
-    sprut.parent_back(1)
-
-    for branch in branches[::]:
-        print('Started', branch)
-
-        sprut.find_element({"title": "", "class_name": "", "control_type": "SplitButton",
-                            "visible_only": True, "enabled_only": True, "found_index": 4}).click()
-
-        sprut.parent_switch({"title": "N100912-Сверка Z отчётов и оборота Спрут", "class_name": "TfrmParams", "control_type": "Window",
-                             "visible_only": True, "enabled_only": True, "found_index": 0})
-
-        sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 1}).click(double=True)
-        keyboard.send_keys("{BACKSPACE}" * 20)
-        sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 1}).type_keys(start_date)
-
-        sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-        sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 0}).click(double=True)
-        keyboard.send_keys("{BACKSPACE}" * 20)
-        sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys(end_date)
-
-        # ? Search for 1 branch
-        sprut.find_element({"title": "", "class_name": "TcxCustomDropDownInnerEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 1}).click()
-        sprut.find_element({"title": "", "class_name": "TcxCustomDropDownInnerEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 1}).click(double=True)
-
-        if sprut.wait_element({"title": "Отчеты", "class_name": "#32770", "control_type": "Window",
-                               "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=8):
-            sprut.find_element({"title": "ОК", "class_name": "Button", "control_type": "Button", "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-        sprut.find_element({"title": "", "class_name": "TcxCustomDropDownInnerEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 1}).type_keys("{F5}")
-
-        sprut.parent_switch({"title": "Поиск", "class_name": "Tvms_search_fm_builder", "control_type": "Window",
-                             "visible_only": True, "enabled_only": True, "found_index": 0}).set_focus()
-
-        try:
-            sprut.find_element({"title": "", "class_name": "", "control_type": "Button",
-                                "visible_only": True, "enabled_only": True, "found_index": 1}, timeout=10).click()
-        except:
-            pass
-
-        sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-
-        sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys('^N')
-
-        # branch = 'Алматинский филиал №1 ТОО "Magnum Cash&Carry"'
-
-        sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
-                            "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys(f'%{branch}%', sprut.keys.ENTER, protect_first=True)
-
-        sprut.find_element({"title": "", "class_name": "", "control_type": "Button",
-                            "visible_only": True, "enabled_only": True, "found_index": 1}).click()
-
-        sprut.find_element({"title": "Выбрать", "class_name": "TvmsBitBtn", "control_type": "Button",
-                            "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-        sprut.parent_back(1)
-
-        sprut.find_element({"title": "Ввод", "class_name": "TvmsFooterButton", "control_type": "Button",
-                            "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-
-        wait_loading(branch)
-
-        sprut.parent_back(1).set_focus()
-
-
-def wait_loading(branch):
-    branch = branch.replace('.', '').replace('"', '')
-    found = False
-    while True:
-        for file in os.listdir(download_path):
-            sleep(.1)
-            creation_time = os.path.getctime(os.path.join(download_path, file))
-            current_time = datetime.datetime.now().timestamp()
-            time_difference = current_time - creation_time
-            days_since_creation = time_difference / (60 * 60 * 24)
-
-            if int(days_since_creation) <= 1 and file[0] != '$' and '.' in file and 'xl' in file:
-                print(file)
-                type = '.' + file.split('.')[1]
-                shutil.move(os.path.join(download_path, file), os.path.join(os.path.join(download_path, 'reports'), branch + type))
-                found = True
-                break
-        if found:
-            break
-
-
 def homebank(email, password):
     web = Web()
     web.run()
@@ -501,13 +385,20 @@ def odines_part(days):
 
             i.click(double=True)
 
+            sleep(3)
+
+            print()
+
             app.parent_switch({"title": "", "class_name": "", "control_type": "Pane",
-                               "visible_only": True, "enabled_only": True, "found_index": 34}, resize=True)
+                               "visible_only": True, "enabled_only": True, "found_index": 29}, resize=True, set_focus=True)
 
-            transactions = app.find_elements({"title_re": ".* Дата транзакции", "class_name": "", "control_type": "Custom",
-                                              "visible_only": True, "enabled_only": True}, timeout=5)
+            try:
+                transactions = app.find_elements({"title_re": ".* Дата транзакции$", "class_name": "", "control_type": "Custom",
+                                                  "visible_only": True, "enabled_only": True}, timeout=10)
+            except:
+                pass
 
-            summs = app.find_elements({"title_re": ".* Сумма", "class_name": "", "control_type": "Custom",
+            summs = app.find_elements({"title_re": ".* Сумма$", "class_name": "", "control_type": "Custom",
                                        "visible_only": True, "enabled_only": True}, timeout=5)
             print(summs)
             for ind, transaction in enumerate(transactions):
@@ -530,7 +421,7 @@ def odines_part(days):
                 print('-------------------------------------------')
 
             app.find_element({"title": "Закрыть", "class_name": "", "control_type": "Button",
-                              "visible_only": True, "enabled_only": True, "found_index": 5}).click()
+                              "visible_only": True, "enabled_only": True}).click()
             print('Finished')
             # exit()
             app.parent_back(1)
@@ -556,16 +447,13 @@ if __name__ == '__main__':
         print(today, cashbook_day)
         print(days)
 
-        # sprut = Sprut("REPS")
-        # sprut.run()
-
-        # open_cashbook(sprut, today)
+        open_cashbook(today)
 
         # homebank('mukhtarova@magnum.kz', 'Aa123456!')
 
         # odines_part()
 
-        odines_part(days)
+        # odines_part(days)
 
     # except Exception as error:
     #     print('GOVNO', error)
