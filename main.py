@@ -2,15 +2,17 @@ import datetime
 import os
 import shutil
 import time
+from copy import copy
 
 import pandas as pd
 from time import sleep
 
 import win32com.client as win32
 import psycopg2 as psycopg2
+from openpyxl import load_workbook
 from pywinauto import keyboard
 
-from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id
+from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger
 from core import Sprut, Odines
 from tools.clipboard import clipboard_get, clipboard_set
 from tools.tg import tg_send
@@ -260,10 +262,12 @@ def open_cashbook(today):
     sprut.find_element({"title": "", "class_name": "TcxCustomDropDownInnerEdit", "control_type": "Edit",
                         "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys(sprut.keys.DOWN, sprut.keys.ENTER)
 
-    a = sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
+    file_path = sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
                             "visible_only": True, "enabled_only": True, "found_index": 1}).get_text()
-    print(a)
-    print()
+    print(file_path)
+
+    sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit", "visible_only": True, "enabled_only": True, "found_index": 0}).set_text('')
+
     right_pane = {"title": "", "class_name": "TvmsListBox", "control_type": "Pane", "visible_only": True, "enabled_only": True, "found_index": 0}
 
     for i in range(10):
@@ -278,22 +282,26 @@ def open_cashbook(today):
             sprut.find_element(right_pane).click()
             sprut.find_element(right_pane).type_keys(sprut.keys.PAGE_DOWN)
 
-    # sprut.find_element({"title": " ", "class_name": "TPanel", "control_type": "Pane",
-    #                     "visible_only": True, "enabled_only": True, "found_index": 0}).click(coords=(20, 17))
-    #
-    # sprut.find_element({"title": "Журналы", "class_name": "", "control_type": "MenuItem",
-    #                     "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-    #
-    # sprut.find_element({"title": "", "class_name": "", "control_type": "MenuItem",
-    #                     "visible_only": True, "enabled_only": True, "found_index": 2}).click()
-    #
-    # sprut.find_element({"title": "", "class_name": "", "control_type": "MenuItem",
-    #                     "visible_only": True, "enabled_only": True, "found_index": 1}).click()
-    #
-    # sprut.find_element({"title": "Закрыть", "class_name": "", "control_type": "Button",
-    #                     "visible_only": True, "enabled_only": True, "found_index": 0}).click()
-    #
-    # sprut.parent_back(1)
+    print()
+
+    sprut.find_element({"title": "Ввод", "class_name": "TvmsFooterButton", "control_type": "Button",
+                        "visible_only": True, "enabled_only": True, "found_index": 0}).click()
+
+    wait_loading(file_path)
+
+    sprut.quit()
+
+
+def wait_loading(filepath):
+    print('Started loading')
+    logger.info('Started loading')
+    while True:
+        if os.path.isfile(filepath):
+            print('LOOOL NASHEL')
+            break
+    print('Finished loading')
+    logger.info('Finished loading')
+    sleep(3)
 
 
 def homebank(email, password):
@@ -447,8 +455,58 @@ if __name__ == '__main__':
         print(today, cashbook_day)
         print(days)
 
-        open_cashbook(today)
+        # open_cashbook(today)
 
+        collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора.xlsx')
+        collection_sheet = collection_file['Файл сбора']
+
+        df = pd.read_excel(r'C:\Users\Abdykarim.D\Documents\Export_230821_121856.xlsx')
+
+        print(df.columns)
+        cols_dict = {
+            'A': 'Компания',
+            'B': 'Дата чека',
+            'C': 'Дата и время чека',
+            'D': 'Сумма с НДС',
+            'E': 'Ерау',
+            'F': '1с',
+            'G': 'офд',
+            'H': 'примечание',
+            'I': '',
+            'J': 'Номер чека',
+            'K': 'Серийный № фиск.регистратора',
+            'L': 'Клиент',
+            'M': 'Дата создания записи',
+            'N': 'Состояние розничного чека'
+        }
+
+        for i, row in df.iterrows():
+
+            last_row = collection_sheet.max_row + 1
+
+            for col_key, col_name in cols_dict.items():
+                print(col_key, col_name)
+                previous_row = collection_sheet[last_row - 1]
+                source_cell = collection_sheet.cell(row=last_row - 1, column=collection_sheet[col_key + '1'].column)
+                new_cell = collection_sheet.cell(row=last_row, column=collection_sheet[col_key + '1'].column)
+
+                new_cell._style = copy(source_cell._style)
+                new_cell.font = copy(source_cell.font)
+                new_cell.border = copy(source_cell.border)
+                new_cell.alignment = copy(source_cell.alignment)
+
+                cell = collection_sheet[f'{col_key}{last_row}']
+                try:
+                    cell.value = row[col_name]
+                    cell.alignment = copy(source_cell.alignment)
+                except:
+                    print('kek')
+                    cell.value = None
+
+        columns = ['Компания', 'Дата чека', 'Дата и время чека', 'Сумма с НДС', 'Ерау', '1с', 'офд ', 'примечание', '', 'Номер чека', 'Серийный № фиск.регистратора', 'Клиент', 'Дата создания записи', 'Состояние розничного чека']
+        # collection_file = collection_file[columns]
+        print(columns, len(columns))
+        collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
         # homebank('mukhtarova@magnum.kz', 'Aa123456!')
 
         # odines_part()
