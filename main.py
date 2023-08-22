@@ -380,8 +380,10 @@ def odines_part(days):
     els = app.find_elements({"title_re": ".* Дата", "class_name": "", "control_type": "Custom",
                              "visible_only": True, "enabled_only": True}, timeout=3)
 
+    all_days = []
+
     for i in els:
-        # print(i)
+
         clipboard_set("")
         i.type_keys("^c", click=True, clear=False)
 
@@ -391,6 +393,8 @@ def odines_part(days):
 
         if get_report_date in days:
 
+            transaction_dict = dict()
+
             i.click(double=True)
 
             sleep(3)
@@ -398,7 +402,10 @@ def odines_part(days):
             print()
 
             app.parent_switch({"title": "", "class_name": "", "control_type": "Pane",
-                               "visible_only": True, "enabled_only": True, "found_index": 29}, resize=True, set_focus=True)
+                               "visible_only": True, "enabled_only": True, "found_index": 29}, resize=True, set_focus=True, maximize=True)
+            print()
+            app.find_element({"title": "Развернуть", "class_name": "", "control_type": "Button",
+                              "visible_only": True, "enabled_only": True, "found_index": 1}).click()
 
             try:
                 transactions = app.find_elements({"title_re": ".* Дата транзакции$", "class_name": "", "control_type": "Custom",
@@ -408,31 +415,173 @@ def odines_part(days):
 
             summs = app.find_elements({"title_re": ".* Сумма$", "class_name": "", "control_type": "Custom",
                                        "visible_only": True, "enabled_only": True}, timeout=5)
+
+            print(transactions)
             print(summs)
+            print(len(transactions), len(summs))
+
             for ind, transaction in enumerate(transactions):
 
                 print('-------------------------------------------')
                 clipboard_set("")
                 transaction.type_keys("^c", click=True, clear=False)
+                transaction.type_keys(app.keys.DOWN, click=True, clear=False)
 
                 transaction_date = clipboard_get()
-                transaction_date = str(transaction_date).strip()[:10]
-                print(f'Transaction {i}: {transaction_date}')
+                transaction_date = str(transaction_date).strip()
+                print(f'Transaction {transaction}: {transaction_date}')
 
                 clipboard_set("")
-                print('Clicking on', summs[ind])
+                print('Clicking on', ind, summs[ind])
                 summs[ind].type_keys("^c", click=True, clear=False)
 
                 summ = clipboard_get()
-                summ = str(summ)
+                summ = round(float(str(summ).replace(' ', '').replace(',', '.').replace(' ', '')))
                 print('Sum:', summ)
                 print('-------------------------------------------')
+
+                transaction_dict.update({transaction_date: summ})
 
             app.find_element({"title": "Закрыть", "class_name": "", "control_type": "Button",
                               "visible_only": True, "enabled_only": True}).click()
             print('Finished')
             # exit()
             app.parent_back(1)
+
+            all_days.append(transaction_dict)
+
+    print(all_days)
+
+
+def create_collection_file():
+    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора.xlsx')
+    collection_sheet = collection_file['Файл сбора']
+
+    df = pd.read_excel(r'C:\Users\Abdykarim.D\Documents\Export_230821_121856.xlsx')
+
+    print(df.columns)
+    cols_dict = {
+        'A': 'Компания',
+        'B': 'Дата чека',
+        'C': 'Дата и время чека',
+        'D': 'Сумма с НДС',
+        'E': 'Ерау',
+        'F': '1с',
+        'G': 'офд',
+        'H': 'примечание',
+        'I': '',
+        'J': 'Номер чека',
+        'K': 'Серийный № фиск.регистратора',
+        'L': 'Клиент',
+        'M': 'Дата создания записи',
+        'N': 'Состояние розничного чека'
+    }
+
+    for i, row in df.iterrows():
+
+        last_row = collection_sheet.max_row + 1
+
+        for col_key, col_name in cols_dict.items():
+            print(col_key, col_name)
+            previous_row = collection_sheet[last_row - 1]
+            source_cell = collection_sheet.cell(row=last_row - 1, column=collection_sheet[col_key + '1'].column)
+            new_cell = collection_sheet.cell(row=last_row, column=collection_sheet[col_key + '1'].column)
+
+            new_cell._style = copy(source_cell._style)
+            new_cell.font = copy(source_cell.font)
+            new_cell.border = copy(source_cell.border)
+            new_cell.alignment = copy(source_cell.alignment)
+
+            cell = collection_sheet[f'{col_key}{last_row}']
+            try:
+                cell.value = row[col_name]
+                cell.alignment = copy(source_cell.alignment)
+            except:
+                cell.value = None
+
+    columns = ['Компания', 'Дата чека', 'Дата и время чека', 'Сумма с НДС', 'Ерау', '1с', 'офд ', 'примечание', '', 'Номер чека', 'Серийный № фиск.регистратора', 'Клиент', 'Дата создания записи', 'Состояние розничного чека']
+    # collection_file = collection_file[columns]
+    print(columns, len(columns))
+    collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
+
+
+def check_homebank_and_collection():
+
+    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
+
+    collection_sheet = collection_file['Файл сбора']
+
+    df = pd.read_excel(r'C:\Users\Abdykarim.D\Downloads\magnumopt_2023-08-09.xlsx')
+
+    df.columns = df.iloc[10]
+
+    for row in range(1, collection_sheet.max_row + 1):
+        try:
+            new_df = df[df['Дата валютир.'] == collection_sheet[f'B{row}'].value.strftime("%d.%m.%Y")]
+        except:
+            new_df = df[df['Дата валютир.'] == collection_sheet[f'B{row}'].value]
+
+        filtered_df = new_df[new_df['Оплачено'] == collection_sheet[f'D{row}'].value]  # Отобрал только те записи, которые были произведены за D{row} день из файла сбора
+
+        # print(filtered_df)
+        for times in filtered_df['Дата/время транз.']:
+
+            collection_date, homebank_date = collection_sheet[f'C{row}'].value, times
+
+            time_diff = check_if_time_diff_less_than_1_min(collection_date, homebank_date)
+
+            if time_diff <= 1:
+                collection_sheet[f'E{row}'].value = 'да'
+
+    collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора2.xlsx')
+
+
+def check_if_time_diff_less_than_1_min(first_date, second_date):
+    try:
+        first_date = datetime.datetime.strptime(first_date, '%d.%m.%Y %H:%M:%S')
+    except:
+        pass
+
+    try:
+        second_date = datetime.datetime.strptime(second_date, '%d.%m.%Y %H:%M')
+    except:
+        try:
+            second_date = datetime.datetime.strptime(second_date, '%d.%m.%Y %H:%M:%S')
+        except:
+            pass
+        pass
+
+    # print(first_date, second_date)
+    # print((first_date - second_date).total_seconds() // 60)
+
+    return abs((first_date - second_date).total_seconds() // 60)
+
+
+def odines_check_with_collection():
+    all_days = [{'25.07.2023 10:49:18': 211440, '25.07.2023 10:54:44': 736440, '25.07.2023 13:32:30': 227700, '25.07.2023 14:57:10': 439200, '25.07.2023 15:57:55': 478224, '25.07.2023 17:54:39': 1601100, '25.07.2023 19:25:44': 516330}, {'26.07.2023 9:12:39': 311850, '26.07.2023 10:01:21': 1012000, '26.07.2023 10:04:37': 1518000, '26.07.2023 17:09:14': 3316434, '26.07.2023 18:41:54': 528000}, {'27.07.2023 12:54:13': 1980000, '27.07.2023 15:44:40': 400512, '27.07.2023 16:37:35': 708900}, {'28.07.2023 17:16:26': 1471477, '28.07.2023 17:18:57': 419976, '28.07.2023 18:14:53': 1429560}, {'29.07.2023 11:59:41': 235872, '29.07.2023 15:54:39': 796572, '29.07.2023 16:21:20': 555840}, {'08.08.2023 15:44:35': 194960, '08.08.2023 15:45:26': 187500, '08.08.2023 16:26:16': 250920, '08.08.2023 16:45:03': 114696, '08.08.2023 19:02:27': 2500000, '08.08.2023 19:03:02': 102942}, {'09.08.2023 10:12:42': 587520, '09.08.2023 10:40:22': 2499680, '09.08.2023 10:42:49': 875840, '09.08.2023 10:46:22': 2499680, '09.08.2023 11:47:15': 504000, '09.08.2023 12:52:40': 201960, '09.08.2023 13:49:30': 2499680, '09.08.2023 13:51:27': 2200480, '09.08.2023 14:17:50': 302080, '09.08.2023 15:43:12': 5572800, '5\xa0572\xa0800,00': 5572800}]
+
+    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
+
+    collection_sheet = collection_file['Файл сбора']
+
+    df = pd.read_excel(r'C:\Users\Abdykarim.D\Downloads\magnumopt_2023-08-09.xlsx')
+
+    df.columns = df.iloc[10]
+
+    for row in range(2, collection_sheet.max_row + 1):
+
+        for day_ in all_days:
+            print('--------------------------------------------------------------------------')
+            for single_day in day_:
+                # single_day_ = None
+                # try:
+                #     single_day_ = datetime.datetime.strptime(single_day, '%d.%m.%Y %H:%M:%S')
+                # except:
+                #     pass
+
+                time_diff = check_if_time_diff_less_than_1_min(collection_sheet[f'C{row}'].value, single_day)
+
+                print(single_day, collection_sheet[f'C{row}'].value, day_.get(single_day), time_diff, sep=' | ')
 
 
 if __name__ == '__main__':
@@ -453,65 +602,21 @@ if __name__ == '__main__':
 
         today = today.strftime('%d.%m.%Y')
         print(today, cashbook_day)
+        days.append('11.08.2023')
+        days = ['12.08.2023']
         print(days)
 
         # open_cashbook(today)
 
-        collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора.xlsx')
-        collection_sheet = collection_file['Файл сбора']
+        # create_collection_file()
 
-        df = pd.read_excel(r'C:\Users\Abdykarim.D\Documents\Export_230821_121856.xlsx')
-
-        print(df.columns)
-        cols_dict = {
-            'A': 'Компания',
-            'B': 'Дата чека',
-            'C': 'Дата и время чека',
-            'D': 'Сумма с НДС',
-            'E': 'Ерау',
-            'F': '1с',
-            'G': 'офд',
-            'H': 'примечание',
-            'I': '',
-            'J': 'Номер чека',
-            'K': 'Серийный № фиск.регистратора',
-            'L': 'Клиент',
-            'M': 'Дата создания записи',
-            'N': 'Состояние розничного чека'
-        }
-
-        for i, row in df.iterrows():
-
-            last_row = collection_sheet.max_row + 1
-
-            for col_key, col_name in cols_dict.items():
-                print(col_key, col_name)
-                previous_row = collection_sheet[last_row - 1]
-                source_cell = collection_sheet.cell(row=last_row - 1, column=collection_sheet[col_key + '1'].column)
-                new_cell = collection_sheet.cell(row=last_row, column=collection_sheet[col_key + '1'].column)
-
-                new_cell._style = copy(source_cell._style)
-                new_cell.font = copy(source_cell.font)
-                new_cell.border = copy(source_cell.border)
-                new_cell.alignment = copy(source_cell.alignment)
-
-                cell = collection_sheet[f'{col_key}{last_row}']
-                try:
-                    cell.value = row[col_name]
-                    cell.alignment = copy(source_cell.alignment)
-                except:
-                    print('kek')
-                    cell.value = None
-
-        columns = ['Компания', 'Дата чека', 'Дата и время чека', 'Сумма с НДС', 'Ерау', '1с', 'офд ', 'примечание', '', 'Номер чека', 'Серийный № фиск.регистратора', 'Клиент', 'Дата создания записи', 'Состояние розничного чека']
-        # collection_file = collection_file[columns]
-        print(columns, len(columns))
-        collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
         # homebank('mukhtarova@magnum.kz', 'Aa123456!')
 
-        # odines_part()
+        # check_homebank_and_collection()
 
-        # odines_part(days)
+        odines_part(days)
+
+        # odines_check_with_collection()
 
     # except Exception as error:
     #     print('GOVNO', error)
