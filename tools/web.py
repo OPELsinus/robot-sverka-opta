@@ -123,6 +123,55 @@ class Web:
             except (Exception,):
                 return False
 
+        def get_element_display_value(self, xpath):
+            return self.driver.find_element('xpath', xpath).value_of_css_property('display')
+
+        def set_elements_innerhtml_or_value(self, xpath, element_type='innerHTML', value=None):
+
+            if element_type == 'innerHTML':
+                self.driver.execute_script(f"""
+                    var xpathExpression = "{xpath}";
+
+                    var matchingElements = document.evaluate(xpathExpression, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+                    for (let i = 0; i < matchingElements.snapshotLength; i++) {{
+                      var targetElement = matchingElements.snapshotItem(i);
+
+                      targetElement.innerHTML = "{value}";
+                    }}
+                """)
+            elif element_type == 'value':
+                self.driver.execute_script(f"""
+                        var xpathExpression = "{xpath}";
+
+                        var matchingElements = document.evaluate(xpathExpression, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+                        for (let i = 0; i < matchingElements.snapshotLength; i++) {{
+                          var targetElement = matchingElements.snapshotItem(i);
+
+                          targetElement.value = "{value}";
+                        }}
+                    """)
+
+        def execute_script_click_js_selector(self, js_path):
+            self.driver.execute_script(f"""
+                var button = document.querySelector('{js_path}');
+                if (button) {{
+                    button.click();
+                }}
+            """)
+
+        def execute_script_click_xpath_selector(self, xpath):
+            self.driver.execute_script(f"""
+                var xpathExpression = "{xpath}";
+                var result = document.evaluate(xpathExpression, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                var element = result.singleNodeValue;
+
+                if (element) {{
+                  element.click();
+                }}
+            """)
+
     def __init__(self, path=None, download_path=None, run=False, timeout=60):
         self.path = path or Path.home().joinpath(r"AppData\Local\.rpa\Chromium\chromedriver.exe")
         self.download_path = download_path or Path.home().joinpath('Downloads')

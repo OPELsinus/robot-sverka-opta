@@ -14,6 +14,7 @@ from pywinauto import keyboard
 
 from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger
 from core import Sprut, Odines
+from tools.app import App
 from tools.clipboard import clipboard_get, clipboard_set
 from tools.tg import tg_send
 from tools.web import Web
@@ -405,7 +406,7 @@ def odines_part(days):
                                "visible_only": True, "enabled_only": True, "found_index": 29}, resize=True, set_focus=True, maximize=True)
             print()
             app.find_element({"title": "Развернуть", "class_name": "", "control_type": "Button",
-                              "visible_only": True, "enabled_only": True, "found_index": 1}).click()
+                              "visible_only": True, "enabled_only": True}, timeout=3).click()
 
             try:
                 transactions = app.find_elements({"title_re": ".* Дата транзакции$", "class_name": "", "control_type": "Custom",
@@ -558,20 +559,16 @@ def check_if_time_diff_less_than_1_min(first_date, second_date):
 
 
 def odines_check_with_collection():
-    all_days = [{'25.07.2023 10:49:18': 211440, '25.07.2023 10:54:44': 736440, '25.07.2023 13:32:30': 227700, '25.07.2023 14:57:10': 439200, '25.07.2023 15:57:55': 478224, '25.07.2023 17:54:39': 1601100, '25.07.2023 19:25:44': 516330}, {'26.07.2023 9:12:39': 311850, '26.07.2023 10:01:21': 1012000, '26.07.2023 10:04:37': 1518000, '26.07.2023 17:09:14': 3316434, '26.07.2023 18:41:54': 528000}, {'27.07.2023 12:54:13': 1980000, '27.07.2023 15:44:40': 400512, '27.07.2023 16:37:35': 708900}, {'28.07.2023 17:16:26': 1471477, '28.07.2023 17:18:57': 419976, '28.07.2023 18:14:53': 1429560}, {'29.07.2023 11:59:41': 235872, '29.07.2023 15:54:39': 796572, '29.07.2023 16:21:20': 555840}, {'08.08.2023 15:44:35': 194960, '08.08.2023 15:45:26': 187500, '08.08.2023 16:26:16': 250920, '08.08.2023 16:45:03': 114696, '08.08.2023 19:02:27': 2500000, '08.08.2023 19:03:02': 102942}, {'09.08.2023 10:12:42': 587520, '09.08.2023 10:40:22': 2499680, '09.08.2023 10:42:49': 875840, '09.08.2023 10:46:22': 2499680, '09.08.2023 11:47:15': 504000, '09.08.2023 12:52:40': 201960, '09.08.2023 13:49:30': 2499680, '09.08.2023 13:51:27': 2200480, '09.08.2023 14:17:50': 302080, '09.08.2023 15:43:12': 5572800, '5\xa0572\xa0800,00': 5572800}]
+
+    all_days = [{'09.08.2023 10:12:42': 587520, '09.08.2023 10:40:22': 2499680, '09.08.2023 10:42:49': 875840, '09.08.2023 10:46:22': 2499680, '09.08.2023 11:47:15': 504000, '09.08.2023 12:52:40': 201960, '09.08.2023 13:49:30': 2499680, '09.08.2023 13:51:27': 2200480, '09.08.2023 14:17:50': 302080, '09.08.2023 15:43:12': 5572800, '09.08.2023 19:20:37': 2427456, '09.08.2023 19:52:35': 2052060}]
 
     collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
 
     collection_sheet = collection_file['Файл сбора']
 
-    df = pd.read_excel(r'C:\Users\Abdykarim.D\Downloads\magnumopt_2023-08-09.xlsx')
-
-    df.columns = df.iloc[10]
-
     for row in range(2, collection_sheet.max_row + 1):
-
+        collection_sheet[f'F{row}'].value = 'нет'
         for day_ in all_days:
-            print('--------------------------------------------------------------------------')
             for single_day in day_:
                 # single_day_ = None
                 # try:
@@ -580,8 +577,71 @@ def odines_check_with_collection():
                 #     pass
 
                 time_diff = check_if_time_diff_less_than_1_min(collection_sheet[f'C{row}'].value, single_day)
+                if time_diff <= 1 and abs(day_.get(single_day) - round(collection_sheet[f'D{row}'].value)) <= 1:
+                    print('--------------------------------------------------------------------------')
+                    print(single_day, collection_sheet[f'C{row}'].value, day_.get(single_day), collection_sheet[f'D{row}'].value, time_diff, sep=' | ')
+                    collection_sheet[f'F{row}'].value = 'да'
 
-                print(single_day, collection_sheet[f'C{row}'].value, day_.get(single_day), time_diff, sep=' | ')
+    collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора2.xlsx')
+    print('--------------------------------------------------------------------------')
+
+
+def sign_ecp(ecp):
+    logger.info('Started ECP')
+
+    logger.info(f'KEY: {ecp}')
+
+    app = App('')
+
+    el = {"title": "Открыть файл", "class_name": "SunAwtDialog", "control_type": "Window",
+          "visible_only": True, "enabled_only": True, "found_index": 0, "parent": None}
+
+    if app.wait_element(el, timeout=30):
+
+        keyboard.send_keys(ecp.replace('(', '{(}').replace(')', '{)}'), pause=0.01, with_spaces=True)
+        sleep(0.05)
+        keyboard.send_keys('{ENTER}')
+
+        if app.wait_element({"title_re": "Формирование ЭЦП.*", "class_name": "SunAwtDialog", "control_type": "Window",
+                             "visible_only": True, "enabled_only": True, "found_index": 0, "parent": None}, timeout=30):
+            app.find_element({"title_re": "Формирование ЭЦП.*", "class_name": "SunAwtDialog", "control_type": "Window",
+                              "visible_only": True, "enabled_only": True, "found_index": 0, "parent": None}).type_keys('Aa123456')
+
+            sleep(2)
+
+            keyboard.send_keys('{ENTER}')
+            sleep(3)
+
+            keyboard.send_keys('{ENTER}')
+            app = None
+            logger.info('Finished ECP')
+        else:
+            logger.info('Quit mazafaka1')
+            app = None
+            return 'broke'
+    else:
+        logger.info('Quit mazafaka')
+        app = None
+        return 'broke'
+
+
+def open_oofd_kotaktelekom():
+
+    web = Web()
+
+    web.run()
+    web.get('https://org.oofd.kz/#/landing/eds-login')
+
+    web.find_element("//button[contains(text(), 'Войти с ЭЦП')]").click()
+
+    '//*[@id="storage-type"]/div/div[2]/div/p[2]/span'
+    ecp_auth = ''
+    ecp_sign = ''
+    # for files in os.listdir(filepath):
+    #     if 'AUTH' in files:
+    #         ecp_auth = os.path.join(filepath, files)
+    #     if 'GOST' in files:
+    #         ecp_sign = os.path.join(filepath, files)
 
 
 if __name__ == '__main__':
@@ -614,9 +674,11 @@ if __name__ == '__main__':
 
         # check_homebank_and_collection()
 
-        odines_part(days)
+        # odines_part(days)
 
         # odines_check_with_collection()
+
+        open_oofd_kotaktelekom()
 
     # except Exception as error:
     #     print('GOVNO', error)
