@@ -72,6 +72,9 @@ db_name = global_env_data['postgre_db_name']
 db_user = global_env_data['postgre_db_username']
 db_pass = global_env_data['postgre_db_password']
 
+adb_username = global_env_data['adb_db_username']
+adb_password = global_env_data['adb_db_password']
+adb_name = global_env_data['adb_db_name']
 
 robot_name = 'robot-sverka_opta'
 

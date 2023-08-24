@@ -12,7 +12,7 @@ import psycopg2 as psycopg2
 from openpyxl import load_workbook
 from pywinauto import keyboard
 
-from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger
+from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger, adb_username, adb_name, adb_password
 from core import Sprut, Odines
 from tools.app import App
 from tools.clipboard import clipboard_get, clipboard_set
@@ -627,16 +627,62 @@ def sign_ecp(ecp):
 
 def open_oofd_kotaktelekom():
 
+    def get_branch_shortname(branch):
+
+        conn = psycopg2.connect(dbname=adb_name, host='172.16.10.22', port='5432',
+                                user=adb_username, password=adb_password)
+        query = f'''
+                select ds.store_name, db.name_sale_object_for_print
+                from dwh_data.dim_branches db
+                left join dwh_data.dim_store ds on ds.sale_source_obj_id = db.id_sale_object
+                where TRIM(REPLACE(LOWER(db.name_sale_object_for_print), ' ', '')) = TRIM(REPLACE(LOWER('{branch}'), ' ', ''))
+                and store_name like '%Торговый%'
+                and current_date between db.datestart and db.dateend
+                group by ds.store_name, db.name_sale_object_for_print
+                '''
+        c = conn.cursor()
+        c.execute(query)
+
+        names = c.fetchall()
+        print('NAMES:', names)
+        conn.commit()
+        c.close()
+        conn.close()
+
+        return names[0][0]
+
+    # collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
+    #
+    # collection_sheet = collection_file['Файл сбора']
+    #
+    # for i in range(2, collection_sheet.max_row + 1):
+    #     print(collection_sheet[f'A{i}'].value)
+    #     get_branch_shortname(collection_sheet[f'A{i}'].value)
+
     web = Web()
 
     web.run()
     web.get('https://org.oofd.kz/#/landing/eds-login')
 
+    if web.wait_element("//button[contains(text(), 'kz')]", timeout=10):
+        web.find_element("//button[contains(text(), 'kz')]").click()
+        web.execute_script_click_xpath_selector("//div[contains(text(), 'RU')]")
+
+    # if web.wait_element("//button[contains(text(), 'Войти с ЭЦП')]", timeout=5):
     web.find_element("//button[contains(text(), 'Войти с ЭЦП')]").click()
 
-    '//*[@id="storage-type"]/div/div[2]/div/p[2]/span'
-    ecp_auth = ''
+    # '//*[@id="storage-type"]/div/div[2]/div/p[2]/span'
+    web.find_element('//*[@id="storage-password"]').type_keys('Aa123456')
+    web.execute_script_click_xpath_selector('//*[@id="storage-type"]/div/div[2]/div/p[2]/span')
+    sleep(10)
+    ecp_auth = r'\\vault.magnum.local\common\Stuff\_06_Бухгалтерия\! Актуальные ЭЦП\Торговый зал АФ №75\AUTH_RSA256_b0c62f8efc9c9d6a8b24534565fca1994bb6e4f4.p12'
     ecp_sign = ''
+    sign_ecp(ecp_auth)
+
+    if web.wait_element("//button[contains(text(), 'Проверить')]", timeout=5):
+        web.find_element("//button[contains(text(), 'Проверить')]").click()
+
+    sleep(1000)
     # for files in os.listdir(filepath):
     #     if 'AUTH' in files:
     #         ecp_auth = os.path.join(filepath, files)
