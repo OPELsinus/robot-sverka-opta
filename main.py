@@ -610,11 +610,17 @@ def sign_ecp(ecp):
             sleep(2)
 
             keyboard.send_keys('{ENTER}')
+
             sleep(3)
 
             keyboard.send_keys('{ENTER}')
-            app = None
-            logger.info('Finished ECP')
+
+            # app = None
+
+            # logger.info('Finished ECP')
+
+            return 'signed'
+
         else:
             logger.info('Quit mazafaka1')
             app = None
@@ -651,38 +657,69 @@ def open_oofd_kotaktelekom():
 
         return names[0][0]
 
-    # collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
-    #
-    # collection_sheet = collection_file['Файл сбора']
-    #
-    # for i in range(2, collection_sheet.max_row + 1):
-    #     print(collection_sheet[f'A{i}'].value)
-    #     get_branch_shortname(collection_sheet[f'A{i}'].value)
+    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
 
-    web = Web()
+    collection_sheet = collection_file['Файл сбора']
 
-    web.run()
-    web.get('https://org.oofd.kz/#/landing/eds-login')
+    for row in range(2, collection_sheet.max_row + 1):
+        print(collection_sheet[f'A{row}'].value)
+        # get_branch_shortname(collection_sheet[f'A{i}'].value)
 
-    if web.wait_element("//button[contains(text(), 'kz')]", timeout=10):
-        web.find_element("//button[contains(text(), 'kz')]").click()
-        web.execute_script_click_xpath_selector("//div[contains(text(), 'RU')]")
+        web = Web()
 
-    # if web.wait_element("//button[contains(text(), 'Войти с ЭЦП')]", timeout=5):
-    web.find_element("//button[contains(text(), 'Войти с ЭЦП')]").click()
+        web.run()
+        web.get('https://org.oofd.kz/#/landing/eds-login')
 
-    # '//*[@id="storage-type"]/div/div[2]/div/p[2]/span'
-    web.find_element('//*[@id="storage-password"]').type_keys('Aa123456')
-    web.execute_script_click_xpath_selector('//*[@id="storage-type"]/div/div[2]/div/p[2]/span')
-    sleep(10)
-    ecp_auth = r'\\vault.magnum.local\common\Stuff\_06_Бухгалтерия\! Актуальные ЭЦП\Торговый зал АФ №75\AUTH_RSA256_b0c62f8efc9c9d6a8b24534565fca1994bb6e4f4.p12'
-    ecp_sign = ''
-    sign_ecp(ecp_auth)
+        if web.wait_element("//button[contains(text(), 'kz')]", timeout=10):
+            web.find_element("//button[contains(text(), 'kz')]").click()
+            web.execute_script_click_xpath_selector("//div[contains(text(), 'RU')]")
 
-    if web.wait_element("//button[contains(text(), 'Проверить')]", timeout=5):
-        web.find_element("//button[contains(text(), 'Проверить')]").click()
+        # if web.wait_element("//button[contains(text(), 'Войти с ЭЦП')]", timeout=5):
+        web.find_element("//button[contains(text(), 'Войти с ЭЦП')]").click()
 
-    sleep(1000)
+        # '//*[@id="storage-type"]/div/div[2]/div/p[2]/span'
+        web.find_element('//*[@id="storage-password"]').type_keys('Aa123456')
+        web.execute_script_click_xpath_selector('//*[@id="storage-type"]/div/div[2]/div/p[2]/span')
+        sleep(10)
+        ecp_auth = r'\\vault.magnum.local\common\Stuff\_06_Бухгалтерия\! Актуальные ЭЦП\Торговый зал АФ №10\AUTH_RSA256_24dc9c69e7bf1a5cd80cc1e61bdbb2229e2496bd.p12'
+        ecp_sign = ''
+        sign_ecp(ecp_auth)
+
+        if web.wait_element("//button[contains(text(), 'Проверить')]", timeout=5):
+            web.find_element("//button[contains(text(), 'Проверить')]").click()
+
+        app = App('')
+
+        app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
+                          "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys('Aa123456', app.keys.ENTER)
+
+        sleep(1)
+
+        app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
+                          "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=10).type_keys('Aa123456', app.keys.ENTER)
+        app = None
+
+        web.find_element("//input[contains(@placeholder, 'Магазин, касса')]").type_keys(str(collection_sheet[f'K{row}'].value).replace(' ', ''), web.keys.ENTER)  # Filling serial number
+
+        web.find_element("(//a[@class='kkm'])[1]").click()  # Find & click on the first element
+        print()
+        try:
+            summs = web.find_elements("//span[@class='transaction__sum ng-star-inserted']")
+
+            for summ in summs:
+                print(round(float(summ.get_attr('text').replace('₸', '').replace(' ', '').replace(',', '.'))))
+
+                # for row1 in range(2, collection_sheet.max_row + 1):
+                #     if
+                # ? Continue
+
+        except:
+            pass
+        print()
+
+
+
+        sleep(0)
     # for files in os.listdir(filepath):
     #     if 'AUTH' in files:
     #         ecp_auth = os.path.join(filepath, files)
