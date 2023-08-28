@@ -12,7 +12,7 @@ import psycopg2 as psycopg2
 from openpyxl import load_workbook
 from pywinauto import keyboard
 
-from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger, adb_username, adb_name, adb_password
+from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger, ecp_paths, mapping_path
 from core import Sprut, Odines
 from tools.app import App
 from tools.clipboard import clipboard_get, clipboard_set
@@ -295,13 +295,13 @@ def open_cashbook(today):
 
 def wait_loading(filepath):
     print('Started loading')
-    logger.info('Started loading')
+    print('Started loading')
     while True:
         if os.path.isfile(filepath):
             print('LOOOL NASHEL')
             break
     print('Finished loading')
-    logger.info('Finished loading')
+    print('Finished loading')
     sleep(3)
 
 
@@ -587,9 +587,9 @@ def odines_check_with_collection():
 
 
 def sign_ecp(ecp):
-    logger.info('Started ECP')
+    print('Started ECP')
 
-    logger.info(f'KEY: {ecp}')
+    print(f'KEY: {ecp}')
 
     app = App('')
 
@@ -602,68 +602,41 @@ def sign_ecp(ecp):
         sleep(0.05)
         keyboard.send_keys('{ENTER}')
 
-        if app.wait_element({"title_re": "Формирование ЭЦП.*", "class_name": "SunAwtDialog", "control_type": "Window",
-                             "visible_only": True, "enabled_only": True, "found_index": 0, "parent": None}, timeout=30):
-            app.find_element({"title_re": "Формирование ЭЦП.*", "class_name": "SunAwtDialog", "control_type": "Window",
-                              "visible_only": True, "enabled_only": True, "found_index": 0, "parent": None}).type_keys('Aa123456')
+        print('Finished ECP')
 
-            sleep(2)
+        app = None
 
-            keyboard.send_keys('{ENTER}')
+        return 'signed'
 
-            sleep(3)
-
-            keyboard.send_keys('{ENTER}')
-
-            # app = None
-
-            # logger.info('Finished ECP')
-
-            return 'signed'
-
-        else:
-            logger.info('Quit mazafaka1')
-            app = None
-            return 'broke'
     else:
-        logger.info('Quit mazafaka')
+        print('Quit mazafaka')
         app = None
         return 'broke'
 
 
 def open_oofd_kotaktelekom():
 
-    def get_branch_shortname(branch):
-
-        conn = psycopg2.connect(dbname=adb_name, host='172.16.10.22', port='5432',
-                                user=adb_username, password=adb_password)
-        query = f'''
-                select ds.store_name, db.name_sale_object_for_print
-                from dwh_data.dim_branches db
-                left join dwh_data.dim_store ds on ds.sale_source_obj_id = db.id_sale_object
-                where TRIM(REPLACE(LOWER(db.name_sale_object_for_print), ' ', '')) = TRIM(REPLACE(LOWER('{branch}'), ' ', ''))
-                and store_name like '%Торговый%'
-                and current_date between db.datestart and db.dateend
-                group by ds.store_name, db.name_sale_object_for_print
-                '''
-        c = conn.cursor()
-        c.execute(query)
-
-        names = c.fetchall()
-        print('NAMES:', names)
-        conn.commit()
-        c.close()
-        conn.close()
-
-        return names[0][0]
-
     collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
 
     collection_sheet = collection_file['Файл сбора']
 
+    mapping_file = pd.read_excel(mapping_path)
+
     for row in range(2, collection_sheet.max_row + 1):
         print(collection_sheet[f'A{row}'].value)
-        # get_branch_shortname(collection_sheet[f'A{i}'].value)
+        seacrh_date = collection_sheet[f'B{row}'].value
+        short_name = mapping_file[mapping_file['Наименование в Спруте'] == collection_sheet[f'A{row}'].value]['Филиал'].iloc[0]
+        ecp_path = mapping_file[mapping_file['Наименование в Спруте'] == collection_sheet[f'A{row}'].value]['Площадка в Спруте'].iloc[0]
+        print(short_name)
+        ecp_auth = ''
+        ecp_sign = ''
+
+        for file in os.listdir(os.path.join(ecp_paths, ecp_path)):
+            if 'AUTH' in str(file):
+                ecp_auth = os.path.join(ecp_paths, ecp_path, file)
+            if 'GOST' in str(file):
+                ecp_sign = os.path.join(ecp_paths, ecp_path, file)
+        print(ecp_sign, ecp_auth)
 
         web = Web()
 
@@ -674,15 +647,12 @@ def open_oofd_kotaktelekom():
             web.find_element("//button[contains(text(), 'kz')]").click()
             web.execute_script_click_xpath_selector("//div[contains(text(), 'RU')]")
 
-        # if web.wait_element("//button[contains(text(), 'Войти с ЭЦП')]", timeout=5):
         web.find_element("//button[contains(text(), 'Войти с ЭЦП')]").click()
 
-        # '//*[@id="storage-type"]/div/div[2]/div/p[2]/span'
         web.find_element('//*[@id="storage-password"]').type_keys('Aa123456')
         web.execute_script_click_xpath_selector('//*[@id="storage-type"]/div/div[2]/div/p[2]/span')
         sleep(10)
-        ecp_auth = r'\\vault.magnum.local\common\Stuff\_06_Бухгалтерия\! Актуальные ЭЦП\Торговый зал АФ №10\AUTH_RSA256_24dc9c69e7bf1a5cd80cc1e61bdbb2229e2496bd.p12'
-        ecp_sign = ''
+
         sign_ecp(ecp_auth)
 
         if web.wait_element("//button[contains(text(), 'Проверить')]", timeout=5):
@@ -700,31 +670,37 @@ def open_oofd_kotaktelekom():
         app = None
 
         web.find_element("//input[contains(@placeholder, 'Магазин, касса')]").type_keys(str(collection_sheet[f'K{row}'].value).replace(' ', ''), web.keys.ENTER)  # Filling serial number
-
+        print('Wrote receipt')
         web.find_element("(//a[@class='kkm'])[1]").click()  # Find & click on the first element
         print()
-        try:
+        if True:
+            year = seacrh_date.split('.')[2]
+            month = seacrh_date.split('.')[1]
+            day = seacrh_date.split('.')[0]
+            web.set_elements_innerhtml_or_value('//*[@id="mat-input-0"]', element_type='value', date=f'{year}-{month}-{day}T00:00:00', value=f'{int(day)}.{int(month)}.{year}')
+            web.set_elements_innerhtml_or_value('//*[@id="mat-input-1"]', element_type='value', date=f'{year}-08-16T23:59:59', value=f'{int(16)}.{int(8)}.{year}')
+            print('Kekus')
+            web.get(f'https://org.oofd.kz/#/main/kkms/757458?startDate={year}-{month}-{day}T00:00:00&endDate={year}-08-16T23:59:59&page=1')
+
             summs = web.find_elements("//span[@class='transaction__sum ng-star-inserted']")
 
-            for summ in summs:
-                print(round(float(summ.get_attr('text').replace('₸', '').replace(' ', '').replace(',', '.'))))
+            transactions = web.find_elements("//div[@class='transaction-wrapper ng-star-inserted']")
 
+            for transaction in transactions:
+                print()
+                transaction.click()
+                # web.execute_script_click_xpath_selector(transaction)
+                # print(round(float(summ.get_attr('text').replace('₸', '').replace(' ', '').replace(',', '.'))))
+                sum = web.find_element("//span[@data-qa='total-sum'][@class='text-right']").get_attr('text')
+                print(sum)
                 # for row1 in range(2, collection_sheet.max_row + 1):
                 #     if
                 # ? Continue
 
-        except:
-            pass
-        print()
-
-
-
-        sleep(0)
-    # for files in os.listdir(filepath):
-    #     if 'AUTH' in files:
-    #         ecp_auth = os.path.join(filepath, files)
-    #     if 'GOST' in files:
-    #         ecp_sign = os.path.join(filepath, files)
+        # except:
+        #     pass
+        sleep(10000)
+        print('-----------------------------------------------------------------------------')
 
 
 if __name__ == '__main__':

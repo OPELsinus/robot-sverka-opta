@@ -123,7 +123,6 @@ class Web:
             except (Exception,):
                 return False
 
-
     def __init__(self, path=None, download_path=None, run=False, timeout=60):
         self.path = path or Path.home().joinpath(r"AppData\Local\.rpa\Chromium\chromedriver.exe")
         self.download_path = download_path or Path.home().joinpath('Downloads')
@@ -231,7 +230,7 @@ class Web:
     def get_element_display_value(self, xpath):
         return self.driver.find_element('xpath', xpath).value_of_css_property('display')
 
-    def set_elements_innerhtml_or_value(self, xpath, element_type='innerHTML', value=None):
+    def set_elements_innerhtml_or_value(self, xpath, element_type='innerHTML', date='', value=None):
 
         if element_type == 'innerHTML':
             self.driver.execute_script(f"""
@@ -246,8 +245,9 @@ class Web:
                 }}
             """)
         elif element_type == 'value':
+            print(date, value, xpath)
             self.driver.execute_script(f"""
-                    var xpathExpression = "{xpath}";
+                    var xpathExpression = '{xpath}';
 
                     var matchingElements = document.evaluate(xpathExpression, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
 
@@ -255,6 +255,7 @@ class Web:
                       var targetElement = matchingElements.snapshotItem(i);
 
                       targetElement.value = "{value}";
+                      targetElement.setAttribute('ng-reflect-model', '{date}');
                     }}
                 """)
 

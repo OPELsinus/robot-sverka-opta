@@ -87,6 +87,8 @@ project_path.mkdir(exist_ok=True, parents=True)
 config_path = project_path.joinpath('config.json')
 config_data = json_read(config_path)
 chat_id = config_data['chat_id']
+mapping_path = config_data['mapping_path']
+ecp_paths = config_data['ecp_paths']
 
 
 log_path = project_path.joinpath(f'{sys.argv[1]}.log' if len(sys.argv) > 1 else 'dev.log')
