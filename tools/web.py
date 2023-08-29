@@ -227,8 +227,25 @@ class Web:
                 return None
             sleep(1)
 
+    def page_back(self):
+        return self.driver.back()
+
     def get_element_display_value(self, xpath):
         return self.driver.find_element('xpath', xpath).value_of_css_property('display')
+
+    def set_elements_value(self, xpath, value=None):
+
+        self.driver.execute_script(f"""
+                var xpathExpression = '{xpath}';
+
+                var matchingElements = document.evaluate(xpathExpression, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+                for (let i = 0; i < matchingElements.snapshotLength; i++) {{
+                  var targetElement = matchingElements.snapshotItem(i);
+
+                  targetElement.value = "{value}";
+                }}
+            """)
 
     def set_elements_innerhtml_or_value(self, xpath, element_type='innerHTML', date='', value=None):
 
