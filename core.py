@@ -172,6 +172,10 @@ class Odines(App):
             "found_index": 0
         }).click()
 
+        if self.wait_element({"title": "Конфигурация базы данных не соответствует сохраненной конфигурации.\nПродолжить?", "class_name": "", "control_type": "Pane",
+                             "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=30):
+            self.find_element({"title": "Да", "class_name": "", "control_type": "Button",
+                              "visible_only": True, "enabled_only": True, "found_index": 0}).click()
         # * set root window --------------------------------------------------------------------------------------------
         self.root = self.find_element(self.root_selector, timeout=180)
 

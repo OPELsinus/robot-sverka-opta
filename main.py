@@ -2,6 +2,7 @@ import datetime
 import os
 import shutil
 import time
+from contextlib import suppress
 from copy import copy
 
 import pandas as pd
@@ -316,7 +317,8 @@ def check_if_time_diff_less_than_1_min(first_date, second_date):
     except:
         try:
             second_date = datetime.datetime.strptime(second_date, '%d.%m.%Y %H:%M:%S')
-        except:
+        except Exception as e:
+            print("GOVNO", e)
             pass
         pass
 
@@ -327,12 +329,14 @@ def check_if_time_diff_less_than_1_min(first_date, second_date):
 
 
 def create_collection_file(file_path):
+
     collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора.xlsx')
     collection_sheet = collection_file['Файл сбора']
 
-    df = pd.read_excel(file_path)
+    df = pd.read_excel(file_path, header=1)
 
     print(df.columns)
+    print(df)
     cols_dict = {
         'A': 'Компания',
         'B': 'Дата чека',
@@ -355,7 +359,7 @@ def create_collection_file(file_path):
         last_row = collection_sheet.max_row + 1
 
         for col_key, col_name in cols_dict.items():
-            print(col_key, col_name)
+            # print(col_key, col_name)
             previous_row = collection_sheet[last_row - 1]
             source_cell = collection_sheet.cell(row=last_row - 1, column=collection_sheet[col_key + '1'].column)
             new_cell = collection_sheet.cell(row=last_row, column=collection_sheet[col_key + '1'].column)
@@ -367,6 +371,7 @@ def create_collection_file(file_path):
 
             cell = collection_sheet[f'{col_key}{last_row}']
             try:
+                print('#1', row[col_name])
                 cell.value = row[col_name]
                 cell.alignment = copy(source_cell.alignment)
             except:
@@ -374,7 +379,7 @@ def create_collection_file(file_path):
 
     columns = ['Компания', 'Дата чека', 'Дата и время чека', 'Сумма с НДС', 'Ерау', '1с', 'офд ', 'примечание', '', 'Номер чека', 'Серийный № фиск.регистратора', 'Клиент', 'Дата создания записи', 'Состояние розничного чека']
     # collection_file = collection_file[columns]
-    print(columns, len(columns))
+    # print(columns, len(columns))
     collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
 
 
@@ -383,10 +388,16 @@ def homebank(email, password):
     web.run()
     web.get('https://epay.homebank.kz/login')
 
+    web.wait_element('//*[@id="mp-content"]/section/main/div[2]/div/div/div[2]/form/div[1]/div/div/span/div/input')
+
+    sleep(5)
+
     web.find_element('//*[@id="mp-content"]/section/main/div[2]/div/div/div[2]/form/div[1]/div/div/span/div/input').type_keys(email)
     web.find_element('//*[@id="mp-content"]/section/main/div[2]/div/div/div[2]/form/div[2]/div/div/span/div/span/input').type_keys(password)
 
     web.find_element('//*[@id="mp-content"]/section/main/div[2]/div/div/div[2]/form/div[3]/div/div/span/button').click()
+
+    web.wait_element("//span[@class='src-layouts-main-header_button hint-section-1-step-3']")
 
     web.get('https://epay.homebank.kz/statements/payment')
 
@@ -516,15 +527,19 @@ def odines_part(days):
             try:
                 transactions = app.find_elements({"title_re": ".* Дата транзакции$", "class_name": "", "control_type": "Custom",
                                                   "visible_only": True, "enabled_only": True}, timeout=10)
+
+                print(transactions)
+
+                print(len(transactions))
+
             except:
                 pass
 
             summs = app.find_elements({"title_re": ".* Сумма$", "class_name": "", "control_type": "Custom",
                                        "visible_only": True, "enabled_only": True}, timeout=5)
 
-            print(transactions)
             print(summs)
-            print(len(transactions), len(summs))
+            print(len(summs))
 
             for ind, transaction in enumerate(transactions):
 
@@ -555,6 +570,7 @@ def odines_part(days):
             app.parent_back(1)
 
             all_days.append(transaction_dict)
+    app.quit()
 
     print(all_days)
 
@@ -563,7 +579,7 @@ def odines_check_with_collection():
 
     all_days = [{'09.08.2023 10:12:42': 587520, '09.08.2023 10:40:22': 2499680, '09.08.2023 10:42:49': 875840, '09.08.2023 10:46:22': 2499680, '09.08.2023 11:47:15': 504000, '09.08.2023 12:52:40': 201960, '09.08.2023 13:49:30': 2499680, '09.08.2023 13:51:27': 2200480, '09.08.2023 14:17:50': 302080, '09.08.2023 15:43:12': 5572800, '09.08.2023 19:20:37': 2427456, '09.08.2023 19:52:35': 2052060}]
 
-    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
+    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора2.xlsx')
 
     collection_sheet = collection_file['Файл сбора']
 
@@ -647,7 +663,7 @@ def sign_ecp(ecp):
 
 def ofd_distributor():
 
-    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
+    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора2.xlsx')
 
     collection_sheet = collection_file['Файл сбора']
 
@@ -672,10 +688,20 @@ def ofd_distributor():
         print(short_name)
         if mapping_file[mapping_file['Наименование в Спруте'] == collection_sheet[f'A{row}'].value]['ОФД'].iloc[0] == 'Казахтелеком':
             print('kotaktelekom')
-            # open_oofd_kotaktelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign)
+            collection_sheet[f'G{row}'].value = 'нет'
+            try:
+                open_oofd_kotaktelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign)
+            except:
+                # error exception
+                pass
         elif mapping_file[mapping_file['Наименование в Спруте'] == collection_sheet[f'A{row}'].value]['ОФД'].iloc[0] == 'Транстелеком':
             print('trans')
-            open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign)
+            collection_sheet[f'G{row}'].value = 'нет'
+            try:
+                open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign)
+            except:
+                # error exception
+                pass
 
     collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора2.xlsx')
 
@@ -692,7 +718,7 @@ def open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign):
 
     # if web.wait_element('//*[@id="close_i_modal"]/img', timeout=10):
     #     web.find_element('//*[@id="close_i_modal"]/img').click()
-
+    sleep(5)
     web.get('https://ofd1.kz/cash_register?status_type=registered')
 
     web.find_element('//*[@id="sample"]').type_keys(collection_sheet[f'K{row}'].value)
@@ -703,20 +729,34 @@ def open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign):
 
     web.find_element('//*[@id="shift_list_button"]').click()
 
-    web.set_elements_value(xpath='//*[@id="start_date"]', value=str(datetime.datetime.strptime(seacrh_date, '%Y-%m-%d')))
-    web.set_elements_value(xpath='//*[@id="end_date"]', value=str(datetime.datetime.strptime(seacrh_date, '%Y-%m-%d') + datetime.timedelta(days=1)))
+    day_ = int(seacrh_date.split('.')[0])
+    month_ = int(seacrh_date.split('.')[1])
+    year_ = int(seacrh_date.split('.')[2])
 
-    web.find_element('//*[@id="shift_list_button_list"]').click()
+    seacrh_date = datetime.datetime(year_, month_, day_)
 
-    web.find_elements('//*[@id="shifts-container"]/tr/td[2]')
+    web.set_elements_value(xpath='//*[@id="start_date"]', value=seacrh_date.strftime('%Y-%m-%d'))
+    web.set_elements_value(xpath='//*[@id="end_date"]', value=(seacrh_date + datetime.timedelta(days=1)).strftime('%Y-%m-%d'))
+    print(seacrh_date)
+    # web.find_element('//*[@id="shift_list_button_list"]').click()
+    web.execute_script_click_xpath_selector('//*[@id="shift_list_button_list"]')
 
-    dates = web.find_elements('//*[@id="shifts-container"]/tr/td[5]/preceding-sibling::td[3]')
-    summs = web.find_elements('//*[@id="shifts-container"]/tr/td[5]')
+    sleep(1.5)
 
-    for ind in range(len(dates)):
-        print(dates[ind].get_attr('text'))
-        print(summs[ind].get_attr('text'))
-        print('----------------------------------------------')
+    if web.wait_element('//*[@id="shifts-container"]/tr/td[5]', timeout=5):
+
+        dates = web.find_elements('//*[@id="shifts-container"]/tr/td[5]/preceding-sibling::td[3]')
+        summs = web.find_elements('//*[@id="shifts-container"]/tr/td[5]')
+
+        for ind in range(len(dates)):
+            print(dates[ind].get_attr('text'))
+            print(summs[ind].get_attr('text'))
+            summ_ = round(float(summs[ind].get_attr('text').replace(' ', '')))
+            if summ_ == int(collection_sheet[f'D{row}'].value) \
+               and 1 >= check_if_time_diff_less_than_1_min(collection_sheet[f'C{row}'].value, datetime.datetime.strptime(dates[ind].get_attr('text'), '%Y-%m-%d %H:%M:%S').strftime('%d.%m.%Y %H:%M:%S')):
+                collection_sheet[f'G{row}'].value = 'да'
+            print('----------------------------------------------')
+        sleep(1)
 
 
 def open_oofd_kotaktelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign):
@@ -741,22 +781,24 @@ def open_oofd_kotaktelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sig
     sleep(3)
     if web.wait_element("//button[contains(text(), 'Проверить')]", timeout=5):
         web.find_element("//button[contains(text(), 'Проверить')]").click()
+    print('Kek0')
+    with suppress(Exception):
+        app = App('')
 
-    app = App('')
+        app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
+                          "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=15).type_keys('Aa123456', app.keys.ENTER)
 
-    app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
-                      "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys('Aa123456', app.keys.ENTER)
+        sleep(1)
 
-    sleep(1)
-
-    app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
-                      "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=10).type_keys('Aa123456', app.keys.ENTER)
-    app = None
-
+        app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
+                          "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=10).type_keys('Aa123456', app.keys.ENTER)
+        app = None
+    print('Kek1')
     web.find_element("//input[contains(@placeholder, 'Магазин, касса')]").type_keys(str(collection_sheet[f'K{row}'].value).replace(' ', ''), web.keys.ENTER)  # Filling serial number
-
+    print('Kek2')
     web.find_element("(//a[@class='kkm'])[1]").click()  # Find & click on the first element
-
+    # sleep(100)
+    print(seacrh_date, seacrh_date.split('.'))
     if True:
         year = seacrh_date.split('.')[2]
         month = seacrh_date.split('.')[1]
@@ -766,9 +808,9 @@ def open_oofd_kotaktelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sig
 
         web.get(f'https://org.oofd.kz/#/main/kkms/757458?startDate={year}-{month}-{day}T00:00:00&endDate={year}-{month}-{day}T23:59:59&page=1')
 
-        transactions = web.find_elements("//div[@class='transaction-wrapper ng-star-inserted']")
-        times = web.find_elements("//div[@class='transaction-wrapper ng-star-inserted']/tax-transaction/div/span/span")
-        summs = web.find_elements("//div[@class='transaction-wrapper ng-star-inserted']//span[@class='transaction__sum ng-star-inserted']")
+        transactions = web.find_elements("//div[@class='transaction-wrapper ng-star-inserted']", timeout=40)
+        times = web.find_elements("//div[@class='transaction-wrapper ng-star-inserted']/tax-transaction/div/span/span", timeout=1)
+        summs = web.find_elements("//div[@class='transaction-wrapper ng-star-inserted']//span[@class='transaction__sum ng-star-inserted']", timeout=1)
 
         for ind in range(len(transactions)):
 
@@ -808,20 +850,20 @@ if __name__ == '__main__':
         print(days)
 
         # filepath = open_cashbook(today)
-        #
+        # filepath = r'C:\Users\Abdykarim.D\Documents\Export_230908_124925.xlsx'
         # create_collection_file(filepath)
         #
         # homebank('mukhtarova@magnum.kz', 'Aa123456!')
         #
-        # check_homebank_and_collection()
+        check_homebank_and_collection()
         #
-        # odines_part(days)
+        odines_part(days)
         #
-        # odines_check_with_collection()
+        odines_check_with_collection()
 
         ofd_distributor()
 
-        # open_oofd_kotaktelekom()
+        # # open_oofd_kotaktelekom()
 
     # except Exception as error:
     #     print('GOVNO', error)

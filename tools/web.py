@@ -262,7 +262,6 @@ class Web:
                 }}
             """)
         elif element_type == 'value':
-            print(date, value, xpath)
             self.driver.execute_script(f"""
                     var xpathExpression = '{xpath}';
 
