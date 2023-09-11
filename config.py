@@ -87,9 +87,28 @@ project_path.mkdir(exist_ok=True, parents=True)
 config_path = project_path.joinpath('config.json')
 config_data = json_read(config_path)
 chat_id = config_data['chat_id']
+saving_path = config_data['saving_path']
+template_path = config_data['template_path']
 mapping_path = config_data['mapping_path']
 ecp_paths = config_data['ecp_paths']
 
 
 log_path = project_path.joinpath(f'{sys.argv[1]}.log' if len(sys.argv) > 1 else 'dev.log')
 logger = init_logger(tg_token=tg_token, chat_id=chat_id, log_path=log_path)
+
+months = [
+    'января',
+    'февраля',
+    'марта',
+    'апреля',
+    'мая',
+    'июня',
+    'июля',
+    'августа',
+    'сентября',
+    'октября',
+    'ноября',
+    'декабря'
+]
+
+months_normal = months = ['', 'январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь']

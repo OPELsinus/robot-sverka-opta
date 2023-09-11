@@ -4,6 +4,7 @@ import shutil
 import time
 from contextlib import suppress
 from copy import copy
+from pathlib import Path
 
 import pandas as pd
 from time import sleep
@@ -13,27 +14,13 @@ import psycopg2 as psycopg2
 from openpyxl import load_workbook
 from pywinauto import keyboard
 
-from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger, ecp_paths, mapping_path
+from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger, ecp_paths, mapping_path, template_path, owa_username, owa_password, months, months_normal, saving_path
 from core import Sprut, Odines
 from tools.app import App
 from tools.clipboard import clipboard_get, clipboard_set
+from tools.net_use import net_use
 from tools.tg import tg_send
 from tools.web import Web
-
-months = [
-    'Январь',
-    'Февраль',
-    'Март',
-    'Апрель',
-    'Май',
-    'Июнь',
-    'Июль',
-    'Август',
-    'Сентябрь',
-    'Октябрь',
-    'Ноябрь',
-    'Декабрь'
-]
 
 
 def sql_create_table():
@@ -213,7 +200,7 @@ def open_cashbook(today):
     sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
                         "visible_only": True, "enabled_only": True, "found_index": 1}).click()
     sprut.find_element({"title": "", "class_name": "TcxCustomInnerTextEdit", "control_type": "Edit",
-                        "visible_only": True, "enabled_only": True, "found_index": 1}).type_keys('05.08.2023')
+                        "visible_only": True, "enabled_only": True, "found_index": 1}).type_keys(today)
 
     sprut.find_element({"title_re": ".", "class_name": "TvmsComboBox", "control_type": "Pane",
                         "visible_only": True, "enabled_only": True, "found_index": 1}).click()
@@ -254,6 +241,7 @@ def open_cashbook(today):
 
     sprut.find_element({"title": "", "class_name": "TvmsDBToolGrid", "control_type": "Pane",
                         "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys('^%E')
+
 
     sprut.parent_switch({"title": "Экспортировать данные", "class_name": "Tvms_fm_DBExportExt", "control_type": "Window",
                          "visible_only": True, "enabled_only": True, "found_index": 0})
@@ -330,13 +318,33 @@ def check_if_time_diff_less_than_1_min(first_date, second_date):
 
 def create_collection_file(file_path):
 
-    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора.xlsx')
+    current_month: int = datetime.datetime.now().month
+    current_year: int = datetime.datetime.now().year
+    current_month_name = months_normal[current_month]
+
+    main_working_file = None
+
+    for item in os.listdir(saving_path):
+
+        if current_month_name in str(item).lower():
+
+            if "~$" in item:
+                item = item.replace("~$", "")
+
+            main_working_file = os.path.join(saving_path, item)
+
+            break
+
+    str_now = datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')
+
+    if not main_working_file:
+        # * If there is no file related to current month
+        file_name = f"лимит ГК филиалов {current_month_name.capitalize()} {current_year}.xlsx"
+        main_working_file = os.path.join(saving_path, file_name)
+
+    collection_file = load_workbook(main_working_file)
     collection_sheet = collection_file['Файл сбора']
 
-    df = pd.read_excel(file_path, header=1)
-
-    print(df.columns)
-    print(df)
     cols_dict = {
         'A': 'Компания',
         'B': 'Дата чека',
@@ -353,6 +361,8 @@ def create_collection_file(file_path):
         'M': 'Дата создания записи',
         'N': 'Состояние розничного чека'
     }
+
+    df = pd.read_excel(file_path, header=1)
 
     for i, row in df.iterrows():
 
@@ -380,10 +390,12 @@ def create_collection_file(file_path):
     columns = ['Компания', 'Дата чека', 'Дата и время чека', 'Сумма с НДС', 'Ерау', '1с', 'офд ', 'примечание', '', 'Номер чека', 'Серийный № фиск.регистратора', 'Клиент', 'Дата создания записи', 'Состояние розничного чека']
     # collection_file = collection_file[columns]
     # print(columns, len(columns))
-    collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
+    collection_file.save(main_working_file)
+
+    return main_working_file
 
 
-def homebank(email, password):
+def homebank(email, password, start_date, end_date):
     web = Web()
     web.run()
     web.get('https://epay.homebank.kz/login')
@@ -404,20 +416,58 @@ def homebank(email, password):
     web.find_element("//span[contains(text(), '427693/14-EC27/07')]").click()
 
     web.find_element('//*[@id="mp-content"]/div/div/div/div/div[1]/div/div/div[1]/div/div/div/div[2]/button').click()
-
+    sleep(1)
     web.find_element('//*[@id="period"]').click()
 
     # ? fix
-    web.find_element("//td[@title = '31 августа 2023 г.']").click()
+    day_ = int(start_date.split('.')[0])
+    month_ = int(start_date.split('.')[1])
+    year_ = start_date.split('.')[2]
+
+    start_ = f"{day_} {months[month_ - 1]} {year_} г."
+
+    day_ = int(end_date.split('.')[0])
+    month_ = int(end_date.split('.')[1])
+    year_ = end_date.split('.')[2]
+
+    end_ = f"{day_} {months[month_ - 1]} {year_} г."
+
+    print(f"//td[@title = '{start_}']")
+    print(f"//td[@title = '{end_}']")
+
+    web.find_element(f"//td[@title = '{start_}']").click()
+    web.find_element(f"//td[@title = '{end_}']").click()
+
+    web.execute_script_click_xpath_selector("//span[contains(text(), 'XLSX')]")
+
+    web.execute_script_click_xpath_selector("//button[contains(@class, 'ant-btn ant-btn-lg')]") # ant-btn ant-btn-primary ant-btn-lg
+    print('started waiting')
+    sleep(25)
+
+    web.find_element("(//span[@class='src-pages-statements-styles_status-column'])[1]").click()
+    print('clicked downloading')
+    filepath = ''
+    found = False
+    while True:
+        for file in os.listdir(download_path):
+            if 'magnumopt' in file and '$' not in file and '.crdownload' not in file:
+                filepath = os.path.join(download_path, file)
+                found = True
+                break
+        if found:
+            break
 
 
-def check_homebank_and_collection():
+    return filepath
 
-    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора1.xlsx')
+
+def check_homebank_and_collection(filepath_, main_file):
+
+    collection_file = load_workbook(main_file)
 
     collection_sheet = collection_file['Файл сбора']
 
-    df = pd.read_excel(r'C:\Users\Abdykarim.D\Downloads\magnumopt_2023-08-09.xlsx')
+    df = pd.read_excel(filepath_)
 
     df.columns = df.iloc[10]
 
@@ -436,10 +486,12 @@ def check_homebank_and_collection():
 
             time_diff = check_if_time_diff_less_than_1_min(collection_date, homebank_date)
 
+            collection_sheet[f'E{row}'].value = 'нет'
+            print(time_diff)
             if time_diff <= 1:
                 collection_sheet[f'E{row}'].value = 'да'
 
-    collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора2.xlsx')
+    collection_file.save(main_file)
 
 
 def odines_part(days):
@@ -519,10 +571,11 @@ def odines_part(days):
             print()
 
             app.parent_switch({"title": "", "class_name": "", "control_type": "Pane",
-                               "visible_only": True, "enabled_only": True, "found_index": 29}, resize=True, set_focus=True, maximize=True)
+                               "visible_only": True, "enabled_only": True}, resize=True, set_focus=True, maximize=True)
             print()
-            app.find_element({"title": "Развернуть", "class_name": "", "control_type": "Button",
-                              "visible_only": True, "enabled_only": True}, timeout=3).click()
+            with suppress(Exception):
+                app.find_element({"title": "Развернуть", "class_name": "", "control_type": "Button",
+                                  "visible_only": True, "enabled_only": True}, timeout=3).click()
 
             try:
                 transactions = app.find_elements({"title_re": ".* Дата транзакции$", "class_name": "", "control_type": "Custom",
@@ -574,12 +627,14 @@ def odines_part(days):
 
     print(all_days)
 
+    return all_days
 
-def odines_check_with_collection():
+
+def odines_check_with_collection(all_days_, main_file):
 
     all_days = [{'09.08.2023 10:12:42': 587520, '09.08.2023 10:40:22': 2499680, '09.08.2023 10:42:49': 875840, '09.08.2023 10:46:22': 2499680, '09.08.2023 11:47:15': 504000, '09.08.2023 12:52:40': 201960, '09.08.2023 13:49:30': 2499680, '09.08.2023 13:51:27': 2200480, '09.08.2023 14:17:50': 302080, '09.08.2023 15:43:12': 5572800, '09.08.2023 19:20:37': 2427456, '09.08.2023 19:52:35': 2052060}]
 
-    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора2.xlsx')
+    collection_file = load_workbook(main_file)
 
     collection_sheet = collection_file['Файл сбора']
 
@@ -599,7 +654,7 @@ def odines_check_with_collection():
                     print(single_day, collection_sheet[f'C{row}'].value, day_.get(single_day), collection_sheet[f'D{row}'].value, time_diff, sep=' | ')
                     collection_sheet[f'F{row}'].value = 'да'
 
-    collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора2.xlsx')
+    collection_file.save(main_file)
     print('--------------------------------------------------------------------------')
 
 
@@ -661,9 +716,9 @@ def sign_ecp(ecp):
         return 'broke'
 
 
-def ofd_distributor():
+def ofd_distributor(main_file):
 
-    collection_file = load_workbook(r'C:\Users\Abdykarim.D\Documents\Файл сбора2.xlsx')
+    collection_file = load_workbook(main_file)
 
     collection_sheet = collection_file['Файл сбора']
 
@@ -703,7 +758,7 @@ def ofd_distributor():
                 # error exception
                 pass
 
-    collection_file.save(r'C:\Users\Abdykarim.D\Documents\Файл сбора2.xlsx')
+    collection_file.save(main_file)
 
 
 def open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign):
@@ -828,43 +883,45 @@ def open_oofd_kotaktelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sig
 
 
 if __name__ == '__main__':
+    sql_create_table()
 
-    if True:
+    today = datetime.datetime.now().date()
+    # today = datetime.date(2023, 8, 4)
+    cashbook_day = (today - datetime.timedelta(days=5)).strftime('%d.%m.%Y')
 
-        sql_create_table()
+    days = []
 
-        today = datetime.datetime.now().date()
-        today = datetime.date(2023, 8, 4)
-        cashbook_day = (today - datetime.timedelta(days=5)).strftime('%d.%m.%Y')
+    for i in range(7, 1, -1):
+        day = (today - datetime.timedelta(days=i)).strftime('%d.%m.%Y')
+        days.append(day)
 
-        days = []
+    today = today.strftime('%d.%m.%Y')
+    print(today, cashbook_day)
 
-        for i in range(7, 1, -1):
-            day = (today - datetime.timedelta(days=i)).strftime('%d.%m.%Y')
-            days.append(day)
+    # days.append('11.08.2023')
+    # days = ['12.08.2023']
+    print(days)
 
-        today = today.strftime('%d.%m.%Y')
-        print(today, cashbook_day)
-        days.append('11.08.2023')
-        days = ['12.08.2023']
-        print(days)
+    net_use(Path(template_path).parent, owa_username, owa_password)
 
-        # filepath = open_cashbook(today)
-        # filepath = r'C:\Users\Abdykarim.D\Documents\Export_230908_124925.xlsx'
-        # create_collection_file(filepath)
-        #
-        # homebank('mukhtarova@magnum.kz', 'Aa123456!')
-        #
-        check_homebank_and_collection()
-        #
-        odines_part(days)
-        #
-        odines_check_with_collection()
+    tg_send(f'Робот запустился - <b>{today}</b>\n\nДата для выгрузки чеков из Спрута - <b>{cashbook_day}</b>\n\nДата проверки в 1С - <b>{days}</b>', bot_token=tg_token, chat_id=chat_id)
 
-        ofd_distributor()
+    try:
 
-        # # open_oofd_kotaktelekom()
+        filepath = open_cashbook(days[0])
 
-    # except Exception as error:
-    #     print('GOVNO', error)
-    #     sleep(2000)
+        main_file = create_collection_file(filepath)
+
+        filepath = homebank('mukhtarova@magnum.kz', 'Aa123456!', days[0], days[-1])
+
+        check_homebank_and_collection(filepath, main_file)
+
+        all_days = odines_part(days)
+
+        odines_check_with_collection(all_days, main_file)
+
+        ofd_distributor(main_file)
+
+    except Exception as error:
+        tg_send(f'Возникла ошибка - {error}', bot_token=tg_token, chat_id=chat_id)
+        raise error
