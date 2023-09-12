@@ -259,6 +259,7 @@ class Web:
                   var targetElement = matchingElements.snapshotItem(i);
 
                   targetElement.innerHTML = "{value}";
+                  targetElement.value = "{value}";
                 }}
             """)
         elif element_type == 'value':
@@ -271,6 +272,7 @@ class Web:
                       var targetElement = matchingElements.snapshotItem(i);
 
                       targetElement.value = "{value}";
+                      targetElement.innerHTML = "{value}";
                       targetElement.setAttribute('ng-reflect-model', '{date}');
                     }}
                 """)
