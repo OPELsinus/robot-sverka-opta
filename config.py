@@ -76,7 +76,7 @@ adb_username = global_env_data['adb_db_username']
 adb_password = global_env_data['adb_db_password']
 adb_name = global_env_data['adb_db_name']
 
-robot_name = 'robot-sverka_opta'
+robot_name = 'robot-sverka-opta'
 
 # ? PROJECT
 project_name = robot_name  # ! FIXME
@@ -90,6 +90,8 @@ chat_id = config_data['chat_id']
 saving_path = config_data['saving_path']
 template_path = config_data['template_path']
 mapping_path = config_data['mapping_path']
+homebank_login = config_data['homebank_login']
+homebank_password = config_data['homebank_password']
 ecp_paths = config_data['ecp_paths']
 
 

@@ -14,7 +14,7 @@ import psycopg2 as psycopg2
 from openpyxl import load_workbook
 from pywinauto import keyboard
 
-from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger, ecp_paths, mapping_path, template_path, owa_username, owa_password, months, months_normal, saving_path, smtp_host, smtp_author
+from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger, ecp_paths, mapping_path, template_path, owa_username, owa_password, months, months_normal, saving_path, smtp_host, smtp_author, homebank_login, homebank_password
 from core import Sprut, Odines
 from tools.app import App
 from tools.clipboard import clipboard_get, clipboard_set
@@ -26,28 +26,6 @@ from utils.homebank import homebank, check_homebank_and_collection
 from utils.odines import odines_part, odines_check_with_collection
 from utils.ofd import ofd_distributor
 from utils.sprut_cashbook import open_cashbook
-
-
-def check_if_time_diff_less_than_1_min(first_date, second_date):
-    try:
-        first_date = datetime.datetime.strptime(first_date, '%d.%m.%Y %H:%M:%S')
-    except:
-        pass
-
-    try:
-        second_date = datetime.datetime.strptime(second_date, '%d.%m.%Y %H:%M')
-    except:
-        try:
-            second_date = datetime.datetime.strptime(second_date, '%d.%m.%Y %H:%M:%S')
-        except Exception as e:
-            logger.info("GOVNO", e)
-            pass
-        pass
-
-    # logger.info(first_date, second_date)
-    # logger.info((first_date - second_date).total_seconds() // 60)
-
-    return abs((first_date - second_date).total_seconds() // 60)
 
 
 def create_collection_file(file_path):
@@ -78,7 +56,7 @@ def create_collection_file(file_path):
 
     collection_file = load_workbook(main_working_file)
     collection_sheet = collection_file['Файл сбора']
-
+    print(f'Main Excel File: {main_working_file}')
     cols_dict = {
         'A': 'Компания',
         'B': 'Дата чека',
@@ -97,6 +75,9 @@ def create_collection_file(file_path):
     }
 
     df = pd.read_excel(file_path)
+
+    if df.columns[0] != 'Компания':
+        df = pd.read_excel(file_path, header=1)
 
     for i, row in df.iterrows():
 
@@ -145,6 +126,7 @@ if __name__ == '__main__':
     logger.info(days)
 
     net_use(Path(template_path).parent, owa_username, owa_password)
+    net_use(ecp_paths, owa_username, owa_password)
 
     tg_send(f'Робот запустился - <b>{today}</b>\n\nДата для выгрузки чеков из Спрута - <b>{cashbook_day}</b>\n\nДата проверки в 1С - <b>{days}</b>', bot_token=tg_token, chat_id=chat_id)
 
@@ -152,23 +134,23 @@ if __name__ == '__main__':
 
         # * ----- 1 -----
         filepath = open_cashbook(cashbook_day)
+        filepath = filepath.replace('Documents', 'Downloads') # If you are compiling for the virtual machines
 
         # * ----- 2 -----
         main_file = create_collection_file(filepath)
 
         # * ----- 3 -----
-        filepath = homebank('mukhtarova@magnum.kz', 'Aa123456!', days[0], days[-1])
+        filepath = homebank(homebank_login, homebank_password, days[0], days[-1])
 
         check_homebank_and_collection(filepath, main_file)
         logger.info('Finished Epay')
 
-        # * ----- 4 -----
+        # # * ----- 4 -----
         all_days = odines_part(days)
 
         odines_check_with_collection(all_days, main_file)
         logger.info('Finished 1C')
-
-        # * ----- 5 -----
+        # # * ----- 5 -----
         ofd_distributor(main_file)
 
         logger.info('Finished OFD')

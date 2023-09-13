@@ -9,9 +9,9 @@ from openpyxl import load_workbook
 from pywinauto import keyboard
 
 from config import logger, ecp_paths, mapping_path
-from main import check_if_time_diff_less_than_1_min
 from tools.app import App
 from tools.web import Web
+from utils.check_time_diff import check_if_time_diff_less_than_1_min
 
 
 def sign_ecp_kt(ecp):

@@ -5,7 +5,8 @@ from openpyxl import load_workbook
 import pandas as pd
 
 from config import logger, download_path, months
-from main import check_if_time_diff_less_than_1_min
+from utils.check_time_diff import check_if_time_diff_less_than_1_min
+from tools.web import Web
 
 
 def homebank(email, password, start_date, end_date):
@@ -55,9 +56,9 @@ def homebank(email, password, start_date, end_date):
 
     web.execute_script_click_xpath_selector("//span[contains(text(), 'XLSX')]")
 
-    web.execute_script_click_xpath_selector("//button[contains(@class, 'ant-btn ant-btn-primary ant-btn-lg')]")  # Form the report
+    # web.execute_script_click_xpath_selector("//button[contains(@class, 'ant-btn ant-btn-primary ant-btn-lg')]")  # Form the report
     # Нижняя строка - кнопка Отменить, использовалось в тесте, чтобы не формировать один и тот же отчёт по несколько раз
-    # web.execute_script_click_xpath_selector("//button[contains(@class, 'ant-btn ant-btn-lg')]") # ant-btn ant-btn-primary ant-btn-lg
+    web.execute_script_click_xpath_selector("//button[contains(@class, 'ant-btn ant-btn-lg')]") # ant-btn ant-btn-primary ant-btn-lg
 
     logger.info('started waiting')
     sleep(25)
@@ -89,6 +90,10 @@ def check_homebank_and_collection(filepath_, main_file):
     df.columns = df.iloc[10]
 
     for row in range(3, collection_sheet.max_row + 1):
+
+        if collection_sheet[f'E{row}'].value is not None:
+            continue
+
         try:
             new_df = df[df['Дата валютир.'] == collection_sheet[f'B{row}'].value.strftime("%d.%m.%Y")]
         except:
