@@ -5,7 +5,7 @@ from openpyxl import load_workbook
 import pandas as pd
 
 from config import logger, download_path, months
-from utils.check_time_diff import check_if_time_diff_less_than_1_min
+from utils.check_time_diff import check_time_diff
 from tools.web import Web
 
 
@@ -56,9 +56,9 @@ def homebank(email, password, start_date, end_date):
 
     web.execute_script_click_xpath_selector("//span[contains(text(), 'XLSX')]")
 
-    # web.execute_script_click_xpath_selector("//button[contains(@class, 'ant-btn ant-btn-primary ant-btn-lg')]")  # Form the report
-    # Нижняя строка - кнопка Отменить, использовалось в тесте, чтобы не формировать один и тот же отчёт по несколько раз
-    web.execute_script_click_xpath_selector("//button[contains(@class, 'ant-btn ant-btn-lg')]") # ant-btn ant-btn-primary ant-btn-lg
+    web.execute_script_click_xpath_selector("//button[contains(@class, 'ant-btn ant-btn-primary ant-btn-lg')]")  # Form the report
+    # Нижняя стrрока - кнопка Отменить, использовалось в тесте, чтобы не формировать один и тот же отчёт по несколько раз
+    # web.execute_script_click_xpath_selector("//button[contains(@class, 'ant-btn ant-btn-lg')]") # ant-btn ant-btn-primary ant-btn-lg
 
     logger.info('started waiting')
     sleep(25)
@@ -107,8 +107,8 @@ def check_homebank_and_collection(filepath_, main_file):
 
             collection_date, homebank_date = collection_sheet[f'C{row}'].value, times
 
-            time_diff = check_if_time_diff_less_than_1_min(collection_date, homebank_date)
-            if time_diff <= 1:
+            time_diff = check_time_diff(collection_date, homebank_date, 5)
+            if time_diff:
                 logger.info(time_diff)
                 collection_sheet[f'E{row}'].value = 'да'
                 break

@@ -3,11 +3,12 @@ import datetime
 from config import logger
 
 
-def check_if_time_diff_less_than_1_min(first_date, second_date):
+def check_time_diff(first_date, second_date, mins):
+
     try:
         first_date = datetime.datetime.strptime(first_date, '%d.%m.%Y %H:%M:%S')
     except:
-        pass
+        ...
 
     try:
         second_date = datetime.datetime.strptime(second_date, '%d.%m.%Y %H:%M')
@@ -16,10 +17,8 @@ def check_if_time_diff_less_than_1_min(first_date, second_date):
             second_date = datetime.datetime.strptime(second_date, '%d.%m.%Y %H:%M:%S')
         except Exception as e:
             logger.info("GOVNO", e)
-            pass
-        pass
 
-    # logger.info(first_date, second_date)
-    # logger.info((first_date - second_date).total_seconds() // 60)
+    max_ = max(first_date, second_date)
+    min_ = min(first_date, second_date)
 
-    return abs((first_date - second_date).total_seconds() // 60)
+    return True if abs((max_ - min_).total_seconds() // 60) <= mins else False

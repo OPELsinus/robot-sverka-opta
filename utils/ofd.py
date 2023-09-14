@@ -11,7 +11,7 @@ from pywinauto import keyboard
 from config import logger, ecp_paths, mapping_path
 from tools.app import App
 from tools.web import Web
-from utils.check_time_diff import check_if_time_diff_less_than_1_min
+from utils.check_time_diff import check_time_diff
 
 
 def sign_ecp_kt(ecp):
@@ -84,8 +84,8 @@ def ofd_distributor(main_file):
 
         print(collection_sheet[f'G{row}'].value)
 
-        # if collection_sheet[f'G{row}'].value is not None:
-        #     continue
+        if collection_sheet[f'G{row}'].value is not None:
+            continue
 
         seacrh_date = collection_sheet[f'B{row}'].value
         collection_sheet[f'G{row}'].value = 'нет'
@@ -176,9 +176,9 @@ def open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign):
         for ind in range(len(dates)):
             summ_ = round(float(summs[ind].get_attr('text').replace(' ', '')))
             # Сори за такие длинные выражения xD
-            time_diff = check_if_time_diff_less_than_1_min(collection_sheet[f'C{row}'].value, datetime.datetime.strptime(dates[ind].get_attr('text'), '%Y-%m-%d %H:%M:%S').strftime('%d.%m.%Y %H:%M:%S'))
-            if summ_ == int(collection_sheet[f'D{row}'].value) \
-               and time_diff <= 1:
+            time_diff = check_time_diff(collection_sheet[f'C{row}'].value, datetime.datetime.strptime(dates[ind].get_attr('text'), '%Y-%m-%d %H:%M:%S').strftime('%d.%m.%Y %H:%M:%S'), 5)
+
+            if summ_ == int(collection_sheet[f'D{row}'].value) and time_diff:
                 logger.info(dates[ind].get_attr('text'))
                 logger.info(summs[ind].get_attr('text'))
                 collection_sheet[f'G{row}'].value = 'да'
@@ -253,9 +253,9 @@ def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_si
 
         sleep(.1)
 
-        if check_if_time_diff_less_than_1_min(seacrh_date + time_, collection_sheet[f'C{row}'].value) <= 1 and summ_ == int(collection_sheet[f'D{row}'].value):
+        if check_time_diff(seacrh_date + time_, collection_sheet[f'C{row}'].value, 5) and summ_ == int(collection_sheet[f'D{row}'].value):
             logger.info(f"{seacrh_date + time_} {summ_}")
-            logger.info(f"{check_if_time_diff_less_than_1_min(seacrh_date + time_, collection_sheet[f'C{row}'].value)}")
+            logger.info(f"{check_time_diff(seacrh_date + time_, collection_sheet[f'C{row}'].value, 5)}")
             collection_sheet[f'G{row}'].value = 'да'
 
     # sleep(10000)

@@ -6,7 +6,7 @@ from openpyxl import load_workbook
 from config import logger
 from core import Odines
 from tools.clipboard import clipboard_set, clipboard_get
-from utils.check_time_diff import check_if_time_diff_less_than_1_min
+from utils.check_time_diff import check_time_diff
 
 
 def odines_part(days):
@@ -158,9 +158,9 @@ def odines_check_with_collection(all_days_, main_file):
             for single_day in day_:
 
                 print(collection_sheet[f'C{row}'].value)
-                time_diff = check_if_time_diff_less_than_1_min(collection_sheet[f'C{row}'].value, single_day)
+                time_diff = check_time_diff(collection_sheet[f'C{row}'].value, single_day, 5)
 
-                if time_diff <= 1 and abs(day_.get(single_day) - round(collection_sheet[f'D{row}'].value)) <= 1:
+                if time_diff and abs(day_.get(single_day) - round(collection_sheet[f'D{row}'].value)) <= 1:
                     logger.info('--------------------------------------------------------------------------')
                     logger.info(f"{single_day}, {collection_sheet[f'C{row}'].value}, {day_.get(single_day)},"
                                 f"{collection_sheet[f'D{row}'].value}, {time_diff}")
