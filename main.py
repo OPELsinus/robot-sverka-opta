@@ -136,23 +136,27 @@ if __name__ == '__main__':
         filepath = open_cashbook(cashbook_day)
         filepath = filepath.replace('Documents', 'Downloads') # If you are compiling for the virtual machines
 
-        # # * ----- 2 -----
+        # * ----- 2 -----
         main_file = create_collection_file(filepath)
+        Path(filepath).unlink()
 
-        # # * ----- 3 -----
+        # * ----- 3 -----
         filepath = homebank(homebank_login, homebank_password, days[0], days[-1])
 
         # filepath = r'C:\Users\Abdykarim.D\Downloads\magnumopt_2023-09-07_2023-09-12.xlsx'
         # main_file = r'\\vault.magnum.local\Common\Stuff\_06_Бухгалтерия\Для робота\Процесс Сверка ОПТа\Файл сбора Сентябрь 2023.xlsx'
         check_homebank_and_collection(filepath, main_file)
+        Path(filepath).unlink()
+
         logger.info('Finished Epay')
 
-        # # # * ----- 4 -----
+        # * ----- 4 -----
         all_days = odines_part(days)
 
         odines_check_with_collection(all_days, main_file)
         logger.info('Finished 1C')
-        # # * ----- 5 -----
+
+        # * ----- 5 -----
         ofd_distributor(main_file)
 
         logger.info('Finished OFD')

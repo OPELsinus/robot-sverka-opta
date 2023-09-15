@@ -28,6 +28,7 @@ import datetime
 # print(f'{day} {months[month - 1]} {year} г.')
 import os
 import uuid
+from math import ceil
 
 import psycopg2
 
@@ -35,6 +36,7 @@ from config import db_host, db_port, db_name, db_user, db_pass
 
 
 def a(file):
+
     import openpyxl
 
     all_days = []
@@ -47,9 +49,9 @@ def a(file):
     wb = openpyxl.load_workbook(main_excel_file, data_only=False)
     print(f"sheet names of {main_excel_file}")
 
-    for int_process_month in range(6, 9):
+    for int_process_month in range(9, 10): # * Месяцы, которые вносить в базу для отработки
         # int_process_month = 8
-        int_process_year = 2023
+        int_process_year = datetime.datetime.today().year
 
         month_name_rus = monthes[int_process_month]
         needed_sheet_name = None
@@ -67,7 +69,7 @@ def a(file):
             if value is None:
 
                 today = datetime.datetime.today()
-                if (today - datetime.datetime(int_process_year, int_process_month, day)).days > 4:
+                if (today - datetime.datetime(int_process_year, int_process_month, day)).days >= 0:
                     # print(f'{day}.0{int_process_month}')
                     if day < 10:
                         if int_process_month < 10:
@@ -88,6 +90,7 @@ def a(file):
         """
     # wb.save(main_excel_file)
     wb.close()
+
     return all_days
 
 
@@ -124,9 +127,42 @@ def read_mapping_excel_file(path):
     return df
 
 
+def define_executors():
+
+    executors_name = ['10.70.2.12', '10.70.2.23', '10.70.2.11', '10.70.2.10', '10.70.2.3']
+    executors = dict()
+
+    branches = ['ШФ33', 'ШФ7', 'АФ8', 'ППФ4', 'АСФ9', 'АСФ6', 'АФ22', 'АФ36', 'ШФ25', 'ШФ10', 'АФ77', 'ШФ34', 'АСФ47', 'АСФ60', 'АФ31', 'АСФ74', 'АФ4', 'АФ30', 'АСФ39', 'АСФ71', 'АФ56', 'ШФ12', 'АФ60', 'ШФ4', 'АФ68', 'АФ82', 'АФ40', 'АФ17', 'АСФ10', 'АСФ24', 'ШФ8', 'АСФ32', 'АСФ69', 'АСФ31', 'АСФ14', 'АСФ35', 'АФ29', 'АФ63', 'АФ84', 'АСФ55', 'АСФ66', 'ШФ26', 'ШФ19', 'АСФ2', 'АФ71', 'АФ61', 'ШФ27', 'ШФ24', 'АСФ21', 'АСФ81', 'АСФ73', 'АФ46', 'АФ19', 'ППФ20', 'АФ12', 'АФ44', 'ППФ7', 'АСФ27', 'АСФ4', 'АФ2', 'АФ39', 'АСФ56', 'АФ80', 'ТФ1', 'АСФ45', 'АФ58', 'АФ50', 'ФКС2', 'АФ65', 'АСФ48', 'ППФ22', 'АФ6', 'АФ76', 'ТФ2', 'АСФ41', 'ППФ16', 'АСФ25', 'ТЗФ2', 'АФ70', 'ППФ2', 'АСФ57', 'АСФ67', 'АСФ1', 'АФ73', 'АФ38', 'АСФ63', 'ППФ9', 'АСФ61', 'АСФ16', 'ШФ6', 'АСФ34', 'АСФ65', 'АФ25', 'АСФ51', 'ППФ11', 'АСФ52', 'АФ7', 'АСФ36', 'АСФ28', 'КФ2', 'ППФ3', 'ТКФ1', 'КФ5', 'АСФ53', 'АФ42', 'АФ49', 'АФ51', 'КФ1', 'АФ59', 'АФ32', 'АФ26', 'ШФ23', 'АСФ20', 'АСФ58', 'АСФ75', 'АФ9', 'АСФ23', 'ШФ1', 'ШФ21',
+                'АСФ80', 'АФ78', 'АСФ46', 'ППФ6', 'АФ20', 'ШФ32', 'ШФ30', 'КФ6', 'АФ48', 'АФ35', 'УКФ2', 'АФ64', 'ШФ35', 'АФ54', 'АФ14', 'АФ66', 'АФ72', 'ППФ18', 'АСФ7', 'АСФ64', 'ППФ1', 'ШФ22', 'ШФ28', 'АСФ72', 'АСФ42', 'АСФ59', 'АФ52', 'АФ62', 'АФ16', 'АФ41', 'УКФ3', 'АФ34', 'КЗФ1', 'ППФ19', 'АСФ29', 'АФ57', 'АФ24', 'АСФ54', 'АСФ5', 'АСФ3', 'АФ45', 'ШФ3', 'АСФ15', 'АСФ17', 'АСФ82', 'АСФ83', 'АФ43', 'АФ21', 'АСФ77', 'АСФ38', 'АФ3', 'АСФ12', 'АСФ70', 'АФ33', 'АСФ50', 'ТЗФ3', 'ППФ8', 'АСФ33', 'ЕКФ1', 'ТФ3', 'ППФ17', 'ППФ5', 'ППФ10', 'АСФ40', 'ШФ9', 'ШФ13', 'АФ69', 'АСФ26', 'АФ75', 'УКФ1', 'АФ15', 'АСФ68', 'АФ47', 'АСФ11', 'АСФ62', 'ШФ20', 'ШФ14', 'АФ23', 'ППФ21', 'ФКС1', 'АСФ13', 'АСФ8', 'ППФ15', 'АСФ18', 'АФ10', 'АФ11', 'АФ37', 'ШФ15', 'АФ53', 'АФ83', 'ШФ2', 'АСФ19', 'ТКФ2', 'АФ18', 'ППФ13', 'АФ67', 'АФ28', 'КФ7', 'ШФ17', 'ШФ5', 'ШФ29', 'АСФ30', 'ШФ18']
+
+    l = ceil(len(branches) / 5)
+
+    print(len(branches), l)
+
+    for i in range(5):
+
+        br = []
+
+        for j in range(l):
+
+            try:
+                br.append(branches[0])
+                branches.remove(branches[0])
+            except:
+                pass
+
+        executors.update({executors_name[i]: br})
+
+    return executors
+
+
 def dispatcher():
+
     print("Dispatcher starts")
+
     table_create()
+
+    executors = define_executors()
 
     # process_date = datetime.datetime.strptime("26.07.2023", "%d.%m.%Y")
 
@@ -170,9 +206,11 @@ def dispatcher():
             str_now = datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')
             if result is not None:
                 for day in result:
-                    insert_q = f"Insert Into ROBOT.ROBOT_SVERKA_BEZNALA_TEST (id, process_date, branch_name, odines_name, sprut_name, store_names, main_excel_file, status, retry_count, date_created) values ('{uuid.uuid4()}', '{day}','{row[1]}','{row[2]}', '{row[3]}','{row[4]}','{os.path.join(main_directory_folder, file_name)}', 'New', 0, '{str_now}' )"
-                    c.execute(insert_q)
-                    conn.commit()
+                    for executor in executors:
+                        if row[1] in executors.get(executor):
+                            insert_q = f"Insert Into ROBOT.ROBOT_SVERKA_BEZNALA (id, process_date, branch_name, odines_name, sprut_name, store_names, main_excel_file, status, retry_count, date_created, executor_name) values ('{uuid.uuid4()}', '{day}','{row[1]}','{row[2]}', '{row[3]}','{row[4]}','{os.path.join(main_directory_folder, file_name)}', 'New', 0, '{str_now}', '{executor}')"
+                            c.execute(insert_q)
+                            conn.commit()
                 c.close()
                 conn.close()
                 tr_count += 1
