@@ -23,6 +23,9 @@ def odines_part(days):
     app = Odines()
     app.run()
 
+    sleep(5)
+    app.maximize_inner()
+
     app.navigate("Банк и касса", "Отчет банка по операциям эквайринга", maximize_innder=True)
 
     table_element = app.find_element(opened_table_selector)

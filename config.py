@@ -96,7 +96,7 @@ ecp_paths = config_data['ecp_paths']
 
 
 log_path = project_path.joinpath(f'{sys.argv[1]}.log' if len(sys.argv) > 1 else 'dev.log')
-logger = init_logger(tg_token=tg_token, chat_id=chat_id, log_path=log_path)
+logger = init_logger(tg_token=tg_token, chat_id=chat_id, log_path=log_path, level=30)
 
 months = [
     'января',
