@@ -108,109 +108,130 @@ def create_collection_file(file_path):
 
 if __name__ == '__main__':
 
-    today = datetime.datetime.today().strftime('%d.%m.%Y')
-    today1 = datetime.datetime.today().strftime('%d.%m.%y')
-    # today = '19.09.2023'
-    # today1 = '19.09.23'
-    calendar = pd.read_excel(f'\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-opta\\Производственный календарь 20{today1[-2:]}.xlsx')
+    for days in range(1, 30):
+        # today = datetime.datetime.today().strftime('%d.%m.%Y')
+        # today1 = datetime.datetime.today().strftime('%d.%m.%y')
+        if days < 10:
+            today = f'0{days}.09.2023'
+            today1 = f'0{days}.09.23'
+        else:
+            today = f'{days}.09.2023'
+            today1 = f'{days}.09.23'
+        calendar = pd.read_excel(f'\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-opta\\Производственный календарь 20{today1[-2:]}.xlsx')
 
-    cur_day_index = calendar[calendar['Day'] == today1]['Type'].index[0]
-    cur_day_type = calendar[calendar['Day'] == today1]['Type'].iloc[0]
-    cur_weekday = calendar[calendar['Day'] == today1]['Weekday'].iloc[0]
+        cur_day_index = calendar[calendar['Day'] == today1]['Type'].index[0]
+        cur_day_type = calendar[calendar['Day'] == today1]['Type'].iloc[0]
+        cur_weekday = calendar[calendar['Day'] == today1]['Weekday'].iloc[0]
 
-    if cur_day_type != 'Holiday':
-        # print('Started current date: ', yesterday2)
-        _ = f"{today1.split('.')[0]}.{today1.split('.')[1]}.{today1.split('.')[2][-2:]}"
-        weekends = [today]
+        if cur_day_type != 'Holiday':
+            # print('Started current date: ', yesterday2)
+            _ = f"{today1.split('.')[0]}.{today1.split('.')[1]}.{today1.split('.')[2][-2:]}"
+            weekends = [today]
 
-        for i in range(cur_day_index - 1, 0, -1):
-            if calendar['Type'].iloc[i] == 'Working':
-                yesterday1 = calendar['Day'].iloc[i]
-                break
+            for i in range(cur_day_index - 1, 0, -1):
+                if calendar['Type'].iloc[i] == 'Working':
+                    yesterday1 = calendar['Day'].iloc[i]
+                    break
 
-            weekends.append(calendar['Day'].iloc[i][:6] + '20' + calendar['Day'].iloc[i][-2:])
+                weekends.append(calendar['Day'].iloc[i][:6] + '20' + calendar['Day'].iloc[i][-2:])
 
-        if len(weekends) > 1 or cur_weekday == 'Вт':
-            sleep(12000)
-            print('sleeped')
+            if len(weekends) > 1 or cur_weekday == 'Вт':
+                sleep(1)  # ? Change when in prod -----------------------------------------------
+                print('sleeped')
+                logger.info(weekends)
             logger.info(weekends)
-        logger.info(weekends)
-        print(weekends)
-        for day in weekends:
+            print(weekends)
+            for day in weekends:
 
-            logger.warning(f'Started processing {day}')
-            print(day)
-            today = datetime.datetime.now().date()
+                logger.warning(f'Started processing {day}')
+                print(day)
+                today = datetime.datetime.now().date()
 
-            day_ = int(day.split('.')[0])
-            month_ = int(day.split('.')[1])
-            year_ = int(day.split('.')[2])
-            today = datetime.date(year_, month_, day_)
+                day_ = int(day.split('.')[0])
+                month_ = int(day.split('.')[1])
+                year_ = int(day.split('.')[2])
+                today = datetime.date(year_, month_, day_)
 
-            cashbook_day = (today - datetime.timedelta(days=5)).strftime('%d.%m.%Y')
+                cashbook_day = (today - datetime.timedelta(days=5)).strftime('%d.%m.%Y')
 
-            days = []
+                days = []
 
-            for i in range(7, 1, -1):
-                day = (today - datetime.timedelta(days=i)).strftime('%d.%m.%Y')
-                days.append(day)
+                for i in range(7, 1, -1):
+                    day = (today - datetime.timedelta(days=i)).strftime('%d.%m.%Y')
+                    days.append(day)
 
-            today = today.strftime('%d.%m.%Y')
-            logger.warning(today, cashbook_day)
-            print(cashbook_day)
-            print(days)
-            # days.append('11.08.2023')
-            # days = ['12.08.2023']
-            logger.info(days)
+                today = today.strftime('%d.%m.%Y')
+                logger.warning(today, cashbook_day)
+                print(cashbook_day)
+                print(days)
+                # days.append('11.08.2023')
+                # days = ['12.08.2023']
+                logger.info(days)
 
-            net_use(Path(template_path).parent, owa_username, owa_password)
-            net_use(ecp_paths, owa_username, owa_password)
+                net_use(Path(template_path).parent, owa_username, owa_password)
+                net_use(ecp_paths, owa_username, owa_password)
 
-            # tg_send(f'Робот запустился - <b>{today}</b>\n\nДата для выгрузки чеков из Спрута - <b>{cashbook_day}</b>\n\nДата проверки в 1С - <b>{days}</b>', bot_token=tg_token, chat_id=chat_id)
+                tg_send(f'Робот запустился - <b>{today}</b>\n\nДата для выгрузки чеков из Спрута - <b>{cashbook_day}</b>\n\nДата проверки в 1С - <b>{days}</b>', bot_token=tg_token, chat_id=chat_id)
 
-            try:
+                if True:
 
-                # * ----- 1 -----
-                filepath = open_cashbook(cashbook_day)
-                filepath = filepath.replace('Documents', 'Downloads') # If you are compiling for the virtual machines
+                    # * ----- 1 -----
+                    # filepath = open_cashbook(cashbook_day)
+                    # filepath = filepath.replace('Documents', 'Downloads') # If you are compiling for the virtual machines
+                    #
+                    # # * ----- 2 -----
+                    # main_file = create_collection_file(filepath)
+                    # Path(filepath).unlink()
+                    #
+                    # # * ----- 3 -----
+                    # logger.warning('Начали Epay')
+                    # logger.info('Начали Epay')
+                    # for tries in range(5):
+                    #     with suppress(Exception):
+                    #         filepath = homebank(homebank_login, homebank_password, days[0], days[-1])
+                    #         break
+                    #
+                    # check_homebank_and_collection(filepath, main_file)
+                    # Path(filepath).unlink()
+                    #
+                    # # * ----- 4 -----
+                    # logger.warning('Начали 1C')
+                    # logger.info('Начали 1C')
+                    for tries in range(5):
+                        if True:
 
-                # * ----- 2 -----
-                main_file = create_collection_file(filepath)
-                Path(filepath).unlink()
+                            all_days = odines_part(days)
 
-                # * ----- 3 -----
-                filepath = homebank(homebank_login, homebank_password, days[0], days[-1])
+                            # odines_check_with_collection(all_days, main_file)
+                            break
 
-                # filepath = r'C:\Users\Abdykarim.D\Downloads\magnumopt_2023-09-07_2023-09-12.xlsx'
-                # main_file = r'\\vault.magnum.local\Common\Stuff\_06_Бухгалтерия\Для робота\Процесс Сверка ОПТа\Файл сбора Сентябрь 2023.xlsx'
-                check_homebank_and_collection(filepath, main_file)
-                Path(filepath).unlink()
+                        # except Exception as err:
+                        #     print("ERROR:", err)
+                        #     logger.warning(f"ERROR OCCURED: {err}")
 
-                logger.warning('Finished Epay')
+                    # * ----- 5 -----
+                    logger.warning('Начали ОФД')
+                    logger.info('Начали ОФД')
 
-                # * ----- 4 -----
-                all_days = odines_part(days)
+                    for tries in range(5):
+                        with suppress(Exception):
+                            ofd_distributor(main_file)
+                            break
 
-                odines_check_with_collection(all_days, main_file)
-                logger.warning('Finished 1C')
+                    # smtp_send(fr"""Добрый день!
+                    # Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
+                    #           to=['Abdykarim.D@magnum.kz', 'Mukhtarova@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
+                    #           subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+                    #
+                    # logger.warning('Законичили отработку')
 
-                # # * ----- 5 -----
-                ofd_distributor(main_file)
+                # except Exception as error:
+                    # smtp_send(fr"""Добрый день!
+                    #                Сверка ОПТа за {today} - ОШИБКА!!!""",
+                    #           to=['Abdykarim.D@magnum.kz', 'Mukhtarova@magnum.kz'],
+                    #           subject=f'ОШИБКА Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+                    # tg_send(f'Возникла ошибка - {error}', bot_token=tg_token, chat_id=chat_id)
+                    # raise error
 
-                logger.warning('Finished OFD')
-
-                smtp_send(fr"""Добрый день!
-                Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
-                          to=['Abdykarim.D@magnum.kz', 'Mukhtarova@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
-                          subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
-
-            except Exception as error:
-                # smtp_send(fr"""Добрый день!
-                #                Сверка ОПТа за {today} - ОШИБКА!!!""",
-                #           to=['Abdykarim.D@magnum.kz', 'Mukhtarova@magnum.kz'],
-                #           subject=f'ОШИБКА Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
-                # tg_send(f'Возникла ошибка - {error}', bot_token=tg_token, chat_id=chat_id)
-                raise error
-
-    else:
-        print(1)
+        else:
+            print(1)

@@ -8,7 +8,7 @@ from core import Sprut
 
 def open_cashbook(today):
 
-    sprut = Sprut("REPS")
+    sprut = Sprut("MAGNUM")
     sprut.run()
 
     sprut.open("Кассовая книга", switch=False)
@@ -23,12 +23,20 @@ def open_cashbook(today):
 
     sprut.find_element({"title": "", "class_name": "", "control_type": "MenuItem",
                         "visible_only": True, "enabled_only": True, "found_index": 0}).click()
+    print()
+    try:
+        sprut.find_element({"title": "Последний использованный фильтр", "class_name": "TvmsToolGridQueryList", "control_type": "Pane",
+                            "visible_only": True, "enabled_only": True, "found_index": 0}).click(coords=(380, 17))
 
-    sprut.find_element({"title": "Последний использованный фильтр", "class_name": "TvmsToolGridQueryList", "control_type": "Pane",
-                        "visible_only": True, "enabled_only": True, "found_index": 0}).click(coords=(380, 17))
+        sprut.parent_switch({"title": "Выборка по запросу", "class_name": "Tvms_modifier_fm_builder", "control_type": "Window",
+                             "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=30).set_focus()
 
-    sprut.parent_switch({"title": "Выборка по запросу", "class_name": "Tvms_modifier_fm_builder", "control_type": "Window",
-                         "visible_only": True, "enabled_only": True, "found_index": 0}).set_focus()
+    except:
+        sprut.find_element({"title": "Последний использованный фильтр", "class_name": "TvmsToolGridQueryList", "control_type": "Pane",
+                            "visible_only": True, "enabled_only": True, "found_index": 0}).click(coords=(290, 15))
+
+        sprut.parent_switch({"title": "Выборка по запросу", "class_name": "Tvms_modifier_fm_builder", "control_type": "Window",
+                             "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=30).set_focus()
 
     try:
         sprut.find_element({"title": "Клиент", "class_name": "", "control_type": "ListItem",
@@ -135,7 +143,9 @@ def open_cashbook(today):
 
     right_pane = {"title": "", "class_name": "TvmsListBox", "control_type": "Pane", "visible_only": True, "enabled_only": True, "found_index": 0}
 
-    for i in range(10):
+    sprut.find_element(right_pane).click()
+
+    for i in range(8):
         try:
             sprut.find_element({"title": "Срочное проведения чека?", "class_name": "", "control_type": "ListItem",
                                 "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=3).click()
@@ -144,7 +154,6 @@ def open_cashbook(today):
                                 "visible_only": True, "enabled_only": True, "found_index": 1}).click()
             break
         except:
-            sprut.find_element(right_pane).click()
             sprut.find_element(right_pane).type_keys(sprut.keys.PAGE_DOWN)
 
     sprut.find_element({"title": "Ввод", "class_name": "TvmsFooterButton", "control_type": "Button",

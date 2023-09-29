@@ -108,26 +108,32 @@ def odines_part(days):
             print(len(summs))
 
             for ind, transaction in enumerate(transactions):
+                if True:
+                    logger.info('-------------------------------------------')
+                    clipboard_set("")
+                    transaction.type_keys("^c", click=True, clear=False)
+                    transaction.type_keys(app.keys.DOWN, click=True, clear=False)
 
-                logger.info('-------------------------------------------')
-                clipboard_set("")
-                transaction.type_keys("^c", click=True, clear=False)
-                transaction.type_keys(app.keys.DOWN, click=True, clear=False)
+                    transaction_date = clipboard_get()
+                    transaction_date = str(transaction_date).strip()
+                    logger.info(f'Transaction {transaction}: {transaction_date}')
 
-                transaction_date = clipboard_get()
-                transaction_date = str(transaction_date).strip()
-                logger.info(f'Transaction {transaction}: {transaction_date}')
+                    clipboard_set("")
+                    logger.info('Clicking on', ind, summs[ind])
+                    summs[ind].type_keys("^c", click=True, clear=False)
 
-                clipboard_set("")
-                logger.info('Clicking on', ind, summs[ind])
-                summs[ind].type_keys("^c", click=True, clear=False)
+                    summ = clipboard_get()
+                    summ = round(float(str(summ).replace(' ', '').replace(',', '.').replace(' ', '')))
+                    logger.info('Sum:', summ)
+                    logger.info('-------------------------------------------')
 
-                summ = clipboard_get()
-                summ = round(float(str(summ).replace(' ', '').replace(',', '.').replace(' ', '')))
-                logger.info('Sum:', summ)
-                logger.info('-------------------------------------------')
+                    transaction_dict.update({transaction_date: summ})
 
-                transaction_dict.update({transaction_date: summ})
+                    if ind == 17:
+                        for scroll in range(10):
+                            transaction.type_keys(app.keys.DOWN, click=True, clear=False)
+                # except Exception as err:
+                #     print(f'ERROR: {err}')
 
             app.find_element({"title": "Закрыть", "class_name": "", "control_type": "Button",
                               "visible_only": True, "enabled_only": True}).click()
@@ -137,14 +143,14 @@ def odines_part(days):
             all_days.append(transaction_dict)
 
     app.quit()
-
+    logger.warning('FINISHING 1C')
     logger.info(all_days)
-
+    logger.warning('FINISHING 1C.1')
     return all_days
 
 
 def odines_check_with_collection(all_days_, main_file):
-
+    logger.warning('Started checking 1C')
     collection_file = load_workbook(main_file)
 
     collection_sheet = collection_file['Файл сбора']

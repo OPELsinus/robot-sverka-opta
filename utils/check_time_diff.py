@@ -17,7 +17,7 @@ def check_time_diff(first_date, second_date, mins):
             second_date = datetime.datetime.strptime(second_date, '%d.%m.%Y %H:%M:%S')
         except Exception as e:
             logger.info("GOVNO", e)
-
+    print('F, S', first_date, '|', second_date)
     max_ = max(first_date, second_date)
     min_ = min(first_date, second_date)
 
