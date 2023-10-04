@@ -45,7 +45,7 @@ def a(file):
                'декабрь']
     template_path = "\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-beznala\\Шаблон.xlsx"
     main_excel_file = file # r'C:\Users\Abdykarim.D\Documents\ШФ4 Сверка по безналичной выручке 2023 год.xlsx'
-
+    print(main_excel_file)
     wb = openpyxl.load_workbook(main_excel_file, data_only=False)
     print(f"sheet names of {main_excel_file}")
 
@@ -59,11 +59,61 @@ def a(file):
             if f"{month_name_rus}{int_process_year}" in sheet_name or f"{month_name_rus} {int_process_year}" in sheet_name or f"{month_name_rus}{str(int_process_year)[2:]}" in sheet_name:
                 needed_sheet_name = sheet_name
                 break
+
+        if not needed_sheet_name:
+            needed_sheet_name = f"{month_name_rus}{int_process_year}"
+            tm_wb = openpyxl.load_workbook(template_path)
+            template_ws = tm_wb['Template']
+            dest_ws = wb.create_sheet(needed_sheet_name)
+            dest_ws.column_dimensions = template_ws.column_dimensions
+            for row_num, row in enumerate(template_ws.iter_rows()):
+                if row_num > 45:
+                    break
+                for col_num, cell in enumerate(row):
+                    dest_cell = dest_ws.cell(row=row_num + 1, column=col_num + 1)
+                    dest_cell.value = cell.value
+                    dest_cell.number_format = cell.number_format
+                    dest_cell.font = openpyxl.styles.Font(
+                        name=cell.font.name,
+                        size=cell.font.size,
+                        bold=cell.font.bold,
+                        italic=cell.font.italic,
+                        underline=cell.font.underline,
+                        strike=cell.font.strike,
+                        color=cell.font.color
+                    )
+                    dest_cell.alignment = openpyxl.styles.Alignment(
+                        horizontal=cell.alignment.horizontal,
+                        vertical=cell.alignment.vertical,
+                        text_rotation=cell.alignment.textRotation,
+                        wrap_text=cell.alignment.wrapText,
+                        shrink_to_fit=cell.alignment.shrinkToFit,
+                        indent=cell.alignment.indent,
+                        relativeIndent=cell.alignment.relativeIndent,
+                        justifyLastLine=cell.alignment.justifyLastLine,
+                        readingOrder=cell.alignment.readingOrder,
+                    )
+                    dest_cell.border = openpyxl.styles.Border(
+                        left=cell.border.left,
+                        right=cell.border.right,
+                        top=cell.border.top,
+                        bottom=cell.border.bottom,
+                        diagonal=cell.border.diagonal,
+                        diagonal_direction=cell.border.diagonal_direction,
+                        start=cell.border.start,
+                        end=cell.border.end
+                    )
+                    dest_cell.fill = openpyxl.styles.PatternFill(
+                        fill_type=cell.fill.fill_type,
+                        start_color=cell.fill.start_color,
+                        end_color=cell.fill.end_color
+                    )
+            tm_wb.close()
         max_days = datetime.date(int_process_year, int_process_month + 1, 1) - datetime.timedelta(days=1)
-
-        for day in range(1, max_days.day):
+        # print('max days:', max_days.day)
+        for day in range(1, max_days.day + 1):
             index_of_process_date: int = day + 2
-
+            # print(needed_sheet_name, index_of_process_date)
             value = wb[needed_sheet_name].cell(index_of_process_date, 3).value
 
             if value is None:
@@ -129,7 +179,7 @@ def read_mapping_excel_file(path):
 
 def define_executors():
 
-    executors_name = ['10.70.2.2', '10.70.2.23', '10.70.2.11', '10.70.2.9']
+    executors_name = ['10.70.2.23', '10.70.2.11', '10.70.2.19', '10.70.2.12', '10.70.2.18']
     executors = dict()
 
     branches = ['ШФ33', 'ШФ7', 'АФ8', 'ППФ4', 'АСФ9', 'АСФ6', 'АФ22', 'АФ36', 'ШФ25', 'ШФ10', 'АФ77', 'ШФ34', 'АСФ47', 'АСФ60', 'АФ31', 'АСФ74', 'АФ4', 'АФ30', 'АСФ39', 'АСФ71', 'АФ56', 'ШФ12', 'АФ60', 'ШФ4', 'АФ68', 'АФ82', 'АФ40', 'АФ17', 'АСФ10', 'АСФ24', 'ШФ8', 'АСФ32', 'АСФ69', 'АСФ31', 'АСФ14', 'АСФ35', 'АФ29', 'АФ63', 'АФ84', 'АСФ55', 'АСФ66', 'ШФ26', 'ШФ19', 'АСФ2', 'АФ71', 'АФ61', 'ШФ27', 'ШФ24', 'АСФ21', 'АСФ81', 'АСФ73', 'АФ46', 'АФ19', 'ППФ20', 'АФ12', 'АФ44', 'ППФ7', 'АСФ27', 'АСФ4', 'АФ2', 'АФ39', 'АСФ56', 'АФ80', 'ТФ1', 'АСФ45', 'АФ58', 'АФ50', 'ФКС2', 'АФ65', 'АСФ48', 'ППФ22', 'АФ6', 'АФ76', 'ТФ2', 'АСФ41', 'ППФ16', 'АСФ25', 'ТЗФ2', 'АФ70', 'ППФ2', 'АСФ57', 'АСФ67', 'АСФ1', 'АФ73', 'АФ38', 'АСФ63', 'ППФ9', 'АСФ61', 'АСФ16', 'ШФ6', 'АСФ34', 'АСФ65', 'АФ25', 'АСФ51', 'ППФ11', 'АСФ52', 'АФ7', 'АСФ36', 'АСФ28', 'КФ2', 'ППФ3', 'ТКФ1', 'КФ5', 'АСФ53', 'АФ42', 'АФ49', 'АФ51', 'КФ1', 'АФ59', 'АФ32', 'АФ26', 'ШФ23', 'АСФ20', 'АСФ58', 'АСФ75', 'АФ9', 'АСФ23', 'ШФ1', 'ШФ21',

@@ -28,10 +28,10 @@ from utils.ofd import ofd_distributor
 from utils.sprut_cashbook import open_cashbook
 
 
-def create_collection_file(file_path):
+def create_collection_file(file_path, cur_day):
 
-    current_month: int = datetime.datetime.now().month
-    current_year: int = datetime.datetime.now().year
+    current_month: int = int(cur_day.split('.')[1])
+    current_year: int = int(cur_day.split('.')[2])
     current_month_name = months_normal[current_month]
 
     main_working_file = None
@@ -108,15 +108,17 @@ def create_collection_file(file_path):
 
 if __name__ == '__main__':
 
-    for days in range(1, 30):
-        # today = datetime.datetime.today().strftime('%d.%m.%Y')
-        # today1 = datetime.datetime.today().strftime('%d.%m.%y')
-        if days < 10:
-            today = f'0{days}.09.2023'
-            today1 = f'0{days}.09.23'
-        else:
-            today = f'{days}.09.2023'
-            today1 = f'{days}.09.23'
+    for days in range(1):
+
+        today = datetime.datetime.today().strftime('%d.%m.%Y')
+        today1 = datetime.datetime.today().strftime('%d.%m.%y')
+
+        # if days < 10:
+        #     today = f'0{days}.10.2023'
+        #     today1 = f'0{days}.10.23'
+        # else:
+        #     today = f'{days}.10.2023'
+        #     today1 = f'{days}.10.23'
         calendar = pd.read_excel(f'\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-opta\\Производственный календарь 20{today1[-2:]}.xlsx')
 
         cur_day_index = calendar[calendar['Day'] == today1]['Type'].index[0]
@@ -136,15 +138,17 @@ if __name__ == '__main__':
                 weekends.append(calendar['Day'].iloc[i][:6] + '20' + calendar['Day'].iloc[i][-2:])
 
             if len(weekends) > 1 or cur_weekday == 'Вт':
-                sleep(1)  # ? Change when in prod -----------------------------------------------
+                print('sleeping')
+                sleep(15000)  # ? Change when in prod -----------------------------------------------
                 print('sleeped')
-                logger.info(weekends)
-            logger.info(weekends)
+            #     logger.info(weekends)
+            # logger.info(weekends)
+            print('Start day', today)
             print(weekends)
-            for day in weekends:
+            for day in weekends[::-1]:
 
-                logger.warning(f'Started processing {day}')
-                print(day)
+                # logger.warning(f'Started processing {day}')
+                print('day:', day)
                 today = datetime.datetime.now().date()
 
                 day_ = int(day.split('.')[0])
@@ -161,9 +165,12 @@ if __name__ == '__main__':
                     days.append(day)
 
                 today = today.strftime('%d.%m.%Y')
-                logger.warning(today, cashbook_day)
+                # logger.warning(today, cashbook_day)
                 print(cashbook_day)
                 print(days)
+                print('==========================\n')
+
+                # continue
                 # days.append('11.08.2023')
                 # days = ['12.08.2023']
                 logger.info(days)
@@ -176,33 +183,37 @@ if __name__ == '__main__':
                 if True:
 
                     # * ----- 1 -----
-                    # filepath = open_cashbook(cashbook_day)
-                    # filepath = filepath.replace('Documents', 'Downloads') # If you are compiling for the virtual machines
-                    #
-                    # # * ----- 2 -----
-                    # main_file = create_collection_file(filepath)
-                    # Path(filepath).unlink()
-                    #
-                    # # * ----- 3 -----
-                    # logger.warning('Начали Epay')
-                    # logger.info('Начали Epay')
-                    # for tries in range(5):
-                    #     with suppress(Exception):
-                    #         filepath = homebank(homebank_login, homebank_password, days[0], days[-1])
-                    #         break
-                    #
-                    # check_homebank_and_collection(filepath, main_file)
-                    # Path(filepath).unlink()
-                    #
-                    # # * ----- 4 -----
-                    # logger.warning('Начали 1C')
-                    # logger.info('Начали 1C')
+                    try:
+                        filepath = open_cashbook(cashbook_day)
+                    except:
+                        logger.warning(f"{days} - Пусто в Розничных чеках за {cashbook_day}")
+                        continue
+                    filepath = filepath.replace('Documents', 'Downloads') # If you are compiling for the virtual machines
+
+                    # * ----- 2 -----
+                    main_file = create_collection_file(filepath, today)
+                    Path(filepath).unlink()
+
+                    # * ----- 3 -----
+                    logger.warning('Начали Epay')
+                    logger.info('Начали Epay')
+                    for tries in range(5):
+                        with suppress(Exception):
+                            filepath = homebank(homebank_login, homebank_password, days[0], days[-1])
+                            break
+
+                    check_homebank_and_collection(filepath, main_file)
+                    Path(filepath).unlink()
+
+                    # * ----- 4 -----
+                    logger.warning('Начали 1C')
+                    logger.info('Начали 1C')
                     for tries in range(5):
                         if True:
 
                             all_days = odines_part(days)
 
-                            # odines_check_with_collection(all_days, main_file)
+                            odines_check_with_collection(all_days, main_file)
                             break
 
                         # except Exception as err:
@@ -218,12 +229,12 @@ if __name__ == '__main__':
                             ofd_distributor(main_file)
                             break
 
-                    # smtp_send(fr"""Добрый день!
-                    # Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
-                    #           to=['Abdykarim.D@magnum.kz', 'Mukhtarova@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
-                    #           subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
-                    #
-                    # logger.warning('Законичили отработку')
+                    smtp_send(fr"""Добрый день!
+                    Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
+                              to=['Abdykarim.D@magnum.kz', 'Mukhtarova@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
+                              subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+
+                    logger.warning('Законичили отработку')
 
                 # except Exception as error:
                     # smtp_send(fr"""Добрый день!

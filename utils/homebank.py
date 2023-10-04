@@ -51,14 +51,14 @@ def homebank(email, password, start_date, end_date):
     logger.info(f"//td[@title = '{end_}']")
 
     # ? Нажимает на нужные даты в календаре
-    try:
-        web.find_element(f"//td[@title = '{start_}']", timeout=10).click()
-        web.find_element(f"//td[@title = '{end_}']", timeout=10).click()
+    for tries in range(3):
+        try:
+            web.find_element(f"//td[@title = '{start_}']", timeout=10).click()
+            web.find_element(f"//td[@title = '{end_}']", timeout=10).click()
+            break
 
-    except:
-        web.find_element("//a[contains(@title, 'Предыдущий месяц')]").click()
-        web.find_element(f"//td[@title = '{start_}']").click()
-        web.find_element(f"//td[@title = '{end_}']").click()
+        except:
+            web.find_element("//a[contains(@title, 'Предыдущий месяц')]").click()
 
     web.execute_script_click_xpath_selector("//span[contains(text(), 'XLSX')]")
 
