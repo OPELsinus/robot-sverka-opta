@@ -10,11 +10,16 @@ from tools.web import Web
 
 
 def homebank(email, password, start_date, end_date):
+
     web = Web()
     web.run()
     web.get('https://epay.homebank.kz/login')
 
-    web.wait_element('//*[@id="mp-content"]/section/main/div[2]/div/div/div[2]/form/div[1]/div/div/span/div/input')
+    for tries in range(3):
+        if web.wait_element('//*[@id="mp-content"]/section/main/div[2]/div/div/div[2]/form/div[1]/div/div/span/div/input'):
+            break
+        else:
+            web.driver.refresh()
 
     sleep(5)
 
@@ -51,10 +56,10 @@ def homebank(email, password, start_date, end_date):
     logger.info(f"//td[@title = '{end_}']")
 
     # ? Нажимает на нужные даты в календаре
-    for tries in range(3):
+    for tries in range(15):
         try:
-            web.find_element(f"//td[@title = '{start_}']", timeout=10).click()
-            web.find_element(f"//td[@title = '{end_}']", timeout=10).click()
+            web.find_element(f"//td[@title = '{start_}']", timeout=5).click()
+            web.find_element(f"//td[@title = '{end_}']", timeout=2).click()
             break
 
         except:

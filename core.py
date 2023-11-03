@@ -119,8 +119,8 @@ class Sprut(App):
 
 
 class Odines(App):
-    def __init__(self, timeout=60, debug=False, logger=None):
-        path_ = r'C:\Program Files\1cv8\common\1cestart.exe'
+    def __init__(self, path, timeout=60, debug=False, logger=None):
+        path_ = path
         super(Odines, self).__init__(path_, timeout=timeout, debug=debug, logger=logger)
         self.keys.CLEAR = self.keys.CLEAN
         self.fuckn_tooltip_selector = {

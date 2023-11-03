@@ -1,3 +1,4 @@
+import socket
 import sys
 from pathlib import Path
 
@@ -77,6 +78,7 @@ adb_password = global_env_data['adb_db_password']
 adb_name = global_env_data['adb_db_name']
 
 robot_name = 'robot-sverka-opta'
+ip_address = socket.gethostbyname(socket.gethostname())
 
 # ? PROJECT
 project_name = robot_name  # ! FIXME

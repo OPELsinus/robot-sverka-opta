@@ -1,27 +1,18 @@
 import datetime
 import os
 import shutil
-import time
 from contextlib import suppress
 from copy import copy
 from pathlib import Path
-
-import pandas as pd
 from time import sleep
 
-import win32com.client as win32
-import psycopg2 as psycopg2
+import pandas as pd
 from openpyxl import load_workbook
-from pywinauto import keyboard
 
-from config import download_path, robot_name, db_host, db_port, db_name, db_user, db_pass, tg_token, chat_id, logger, ecp_paths, mapping_path, template_path, owa_username, owa_password, months, months_normal, saving_path, smtp_host, smtp_author, homebank_login, homebank_password
-from core import Sprut, Odines
-from tools.app import App
-from tools.clipboard import clipboard_get, clipboard_set
+from config import tg_token, chat_id, logger, ecp_paths, template_path, owa_username, owa_password, months_normal, saving_path, smtp_host, smtp_author, homebank_login, homebank_password
 from tools.net_use import net_use
 from tools.smtp import smtp_send
 from tools.tg import tg_send
-from tools.web import Web
 from utils.homebank import homebank, check_homebank_and_collection
 from utils.odines import odines_part, odines_check_with_collection
 from utils.ofd import ofd_distributor
@@ -119,6 +110,7 @@ if __name__ == '__main__':
         # else:
         #     today = f'{days}.10.2023'
         #     today1 = f'{days}.10.23'
+
         calendar = pd.read_excel(f'\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-opta\\Производственный календарь 20{today1[-2:]}.xlsx')
 
         cur_day_index = calendar[calendar['Day'] == today1]['Type'].index[0]
@@ -138,17 +130,18 @@ if __name__ == '__main__':
                 weekends.append(calendar['Day'].iloc[i][:6] + '20' + calendar['Day'].iloc[i][-2:])
 
             if len(weekends) > 1 or cur_weekday == 'Вт':
-                print('sleeping')
-                sleep(15000)  # ? Change when in prod -----------------------------------------------
-                print('sleeped')
+                logger.info('sleeping')
+                while int(datetime.datetime.now().hour) < 15:
+                    sleep(300)
+                logger.info('sleeped')
             #     logger.info(weekends)
             # logger.info(weekends)
-            print('Start day', today)
-            print(weekends)
+            logger.info('Start day', today)
+            logger.info(weekends)
             for day in weekends[::-1]:
 
                 # logger.warning(f'Started processing {day}')
-                print('day:', day)
+                logger.info('day:', day)
                 today = datetime.datetime.now().date()
 
                 day_ = int(day.split('.')[0])
@@ -166,9 +159,9 @@ if __name__ == '__main__':
 
                 today = today.strftime('%d.%m.%Y')
                 # logger.warning(today, cashbook_day)
-                print(cashbook_day)
-                print(days)
-                print('==========================\n')
+                logger.info(cashbook_day)
+                logger.info(days)
+                logger.info('==========================\n')
 
                 # continue
                 # days.append('11.08.2023')
@@ -186,8 +179,15 @@ if __name__ == '__main__':
                     try:
                         filepath = open_cashbook(cashbook_day)
                     except:
+
                         logger.warning(f"{days} - Пусто в Розничных чеках за {cashbook_day}")
-                        continue
+                        smtp_send(fr"""Добрый день!
+                                Сверка ОПТа за {today} - Пусто в Розничных чеках за {cashbook_day}""",
+                                  to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
+                                  subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+
+                        logger.warning(f'Законичили отработку за {today}')
+                        break
                     filepath = filepath.replace('Documents', 'Downloads') # If you are compiling for the virtual machines
 
                     # * ----- 2 -----
@@ -231,10 +231,10 @@ if __name__ == '__main__':
 
                     smtp_send(fr"""Добрый день!
                     Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
-                              to=['Abdykarim.D@magnum.kz', 'Mukhtarova@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
+                              to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
                               subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
 
-                    logger.warning('Законичили отработку')
+                    logger.warning(f'Законичили отработку за {today}')
 
                 # except Exception as error:
                     # smtp_send(fr"""Добрый день!

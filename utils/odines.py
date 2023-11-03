@@ -3,7 +3,7 @@ from time import sleep
 
 from openpyxl import load_workbook
 
-from config import logger
+from config import logger, ip_address
 from core import Odines
 from tools.clipboard import clipboard_set, clipboard_get
 from utils.check_time_diff import check_time_diff
@@ -20,7 +20,8 @@ def odines_part(days):
                                  "control_type": "Window", "visible_only": True, "enabled_only": True,
                                  "found_index": 0}
 
-    app = Odines()
+    path = r'C:\Program Files\1cv8\8.3.13.1644\bin\1cv8.exe' if ip_address == '172.20.1.24' else r'C:\Program Files\1cv8\common\1cestart.exe'
+    app = Odines(path)
     app.run()
 
     sleep(5)
@@ -64,83 +65,101 @@ def odines_part(days):
 
     app.parent_back(1)
 
-    els = app.find_elements({"title_re": ".* Дата", "class_name": "", "control_type": "Custom",
-                             "visible_only": True, "enabled_only": True}, timeout=3)
+    app.find_element({"title": "", "class_name": "", "control_type": "Table", "visible_only": True, "enabled_only": True, "found_index": 0}).click()
 
-    all_days = []
+    for _ in range(15):
+        app.find_element({"title": "", "class_name": "", "control_type": "Table", "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys(app.keys.PAGE_UP)
 
-    for i in els:
+    found = False
+    for _ in range(6):
 
-        clipboard_set("")
-        i.type_keys("^c", click=True, clear=False)
+        els = app.find_elements({"title_re": ".* Дата", "class_name": "", "control_type": "Custom",
+                                 "visible_only": True, "enabled_only": True}, timeout=3)
 
-        get_report_date = clipboard_get()
-        get_report_date = str(get_report_date).strip()[:10]
-        logger.info(get_report_date)
+        all_days = []
 
-        if get_report_date in days:
+        for i in els:
 
-            transaction_dict = dict()
+            clipboard_set("")
+            i.type_keys("^c", click=True, clear=False)
 
-            i.click(double=True)
+            get_report_date = clipboard_get()
+            get_report_date = str(get_report_date).strip()[:10]
+            logger.info(get_report_date)
 
-            sleep(3)
+            if get_report_date in days:
 
-            app.parent_switch({"title": "", "class_name": "", "control_type": "Pane",
-                               "visible_only": True, "enabled_only": True}, resize=True, set_focus=True, maximize=True)
+                found = True
 
-            with suppress(Exception):
-                app.find_element({"title": "Развернуть", "class_name": "", "control_type": "Button",
-                                  "visible_only": True, "enabled_only": True}, timeout=3).click()
+                transaction_dict = dict()
 
-            # ? Собираем все даты транзакций и их суммы
-            transactions = app.find_elements({"title_re": ".* Дата транзакции$", "class_name": "", "control_type": "Custom",
-                                              "visible_only": True, "enabled_only": True}, timeout=10)
+                i.click(double=True)
 
-            print(transactions)
+                sleep(0.5)
 
-            print(len(transactions))
+                app.parent_switch({"title": "", "class_name": "", "control_type": "Pane",
+                                   "visible_only": True, "enabled_only": True}, resize=True, set_focus=True, maximize=True)
 
-            summs = app.find_elements({"title_re": ".* Сумма$", "class_name": "", "control_type": "Custom",
-                                       "visible_only": True, "enabled_only": True}, timeout=5)
+                with suppress(Exception):
+                    app.find_element({"title": "Развернуть", "class_name": "", "control_type": "Button",
+                                      "visible_only": True, "enabled_only": True}, timeout=3).click()
 
-            print(summs)
-            print(len(summs))
+                # ? Собираем все даты транзакций и их суммы
+                transactions = app.find_elements({"title_re": ".* Дата транзакции$", "class_name": "", "control_type": "Custom",
+                                                  "visible_only": True, "enabled_only": True}, timeout=10)
 
-            for ind, transaction in enumerate(transactions):
-                if True:
-                    logger.info('-------------------------------------------')
-                    clipboard_set("")
-                    transaction.type_keys("^c", click=True, clear=False)
-                    transaction.type_keys(app.keys.DOWN, click=True, clear=False)
+                print(transactions)
 
-                    transaction_date = clipboard_get()
-                    transaction_date = str(transaction_date).strip()
-                    logger.info(f'Transaction {transaction}: {transaction_date}')
+                print(len(transactions))
 
-                    clipboard_set("")
-                    logger.info('Clicking on', ind, summs[ind])
-                    summs[ind].type_keys("^c", click=True, clear=False)
+                summs = app.find_elements({"title_re": ".* Сумма$", "class_name": "", "control_type": "Custom",
+                                           "visible_only": True, "enabled_only": True}, timeout=5)
 
-                    summ = clipboard_get()
-                    summ = round(float(str(summ).replace(' ', '').replace(',', '.').replace(' ', '')))
-                    logger.info('Sum:', summ)
-                    logger.info('-------------------------------------------')
+                print(summs)
+                print(len(summs))
 
-                    transaction_dict.update({transaction_date: summ})
+                for ind, transaction in enumerate(transactions):
+                    if True:
+                        logger.info('-------------------------------------------')
+                        clipboard_set("")
+                        transaction.type_keys("^c", click=True, clear=False)
+                        transaction.type_keys(app.keys.DOWN, click=True, clear=False)
 
-                    if ind == 17:
-                        for scroll in range(10):
-                            transaction.type_keys(app.keys.DOWN, click=True, clear=False)
-                # except Exception as err:
-                #     print(f'ERROR: {err}')
+                        transaction_date = clipboard_get()
+                        transaction_date = str(transaction_date).strip()
+                        logger.info(f'Transaction {transaction}: {transaction_date}')
 
-            app.find_element({"title": "Закрыть", "class_name": "", "control_type": "Button",
-                              "visible_only": True, "enabled_only": True}).click()
+                        clipboard_set("")
+                        logger.info('Clicking on', ind, summs[ind])
+                        summs[ind].type_keys("^c", click=True, clear=False)
 
-            app.parent_back(1)
+                        summ = clipboard_get()
+                        summ = round(float(str(summ).replace(' ', '').replace(',', '.').replace(' ', '')))
+                        logger.info('Sum:', summ)
+                        logger.info('-------------------------------------------')
 
-            all_days.append(transaction_dict)
+                        transaction_dict.update({transaction_date: summ})
+
+                        if ind == 17:
+                            for scroll in range(10):
+                                transaction.type_keys(app.keys.DOWN, click=True, clear=False)
+                    # except Exception as err:
+                    #     print(f'ERROR: {err}')
+
+                app.find_element({"title": "Закрыть", "class_name": "", "control_type": "Button",
+                                  "visible_only": True, "enabled_only": True}).click()
+
+                app.parent_back(1)
+
+                all_days.append(transaction_dict)
+
+            elif found:
+                break
+
+        app.find_element({"title": "", "class_name": "", "control_type": "Table", "visible_only": True, "enabled_only": True, "found_index": 0}).click()
+
+        app.find_element({"title": "", "class_name": "", "control_type": "Table", "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys(app.keys.PAGE_DOWN)
+        # app.find_element({"title": "", "class_name": "", "control_type": "Table", "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys(app.keys.PAGE_DOWN)
 
     app.quit()
     logger.warning('FINISHING 1C')

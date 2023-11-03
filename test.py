@@ -1,273 +1,245 @@
 import datetime
-
-# months = [
-#     'января',
-#     'февраля',
-#     'марта',
-#     'апреля',
-#     'мая',
-#     'июня',
-#     'июля',
-#     'августа',
-#     'сентября',
-#     'октября',
-#     'ноября',
-#     'декабря'
-# ]
-#
-# today = datetime.date(2024, 1, 1)
-#
-# cashbook_day = (today - datetime.timedelta(days=5)).strftime('%d.%m.%Y')
-# today = today.strftime('%d.%m.%Y')
-# print(today, cashbook_day)
-#
-# day = int(cashbook_day.split('.')[0])
-# month = int(cashbook_day.split('.')[1])
-# year = int(cashbook_day.split('.')[2])
-#
-# print(f'{day} {months[month - 1]} {year} г.')
 import os
-import uuid
-from math import ceil
+import shutil
+from contextlib import suppress
+from copy import copy
+from pathlib import Path
+from time import sleep
 
-import psycopg2
+import pandas as pd
+from openpyxl import load_workbook
 
-from config import db_host, db_port, db_name, db_user, db_pass
-
-
-def a(file):
-
-    import openpyxl
-
-    all_days = []
-
-    monthes = ['', 'январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь',
-               'декабрь']
-    template_path = "\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-beznala\\Шаблон.xlsx"
-    main_excel_file = file # r'C:\Users\Abdykarim.D\Documents\ШФ4 Сверка по безналичной выручке 2023 год.xlsx'
-    print(main_excel_file)
-    wb = openpyxl.load_workbook(main_excel_file, data_only=False)
-    print(f"sheet names of {main_excel_file}")
-
-    for int_process_month in range(9, 10): # * Месяцы, которые вносить в базу для отработки
-        # int_process_month = 8
-        int_process_year = datetime.datetime.today().year
-
-        month_name_rus = monthes[int_process_month]
-        needed_sheet_name = None
-        for sheet_name in wb.sheetnames:
-            if f"{month_name_rus}{int_process_year}" in sheet_name or f"{month_name_rus} {int_process_year}" in sheet_name or f"{month_name_rus}{str(int_process_year)[2:]}" in sheet_name:
-                needed_sheet_name = sheet_name
-                break
-
-        if not needed_sheet_name:
-            needed_sheet_name = f"{month_name_rus}{int_process_year}"
-            tm_wb = openpyxl.load_workbook(template_path)
-            template_ws = tm_wb['Template']
-            dest_ws = wb.create_sheet(needed_sheet_name)
-            dest_ws.column_dimensions = template_ws.column_dimensions
-            for row_num, row in enumerate(template_ws.iter_rows()):
-                if row_num > 45:
-                    break
-                for col_num, cell in enumerate(row):
-                    dest_cell = dest_ws.cell(row=row_num + 1, column=col_num + 1)
-                    dest_cell.value = cell.value
-                    dest_cell.number_format = cell.number_format
-                    dest_cell.font = openpyxl.styles.Font(
-                        name=cell.font.name,
-                        size=cell.font.size,
-                        bold=cell.font.bold,
-                        italic=cell.font.italic,
-                        underline=cell.font.underline,
-                        strike=cell.font.strike,
-                        color=cell.font.color
-                    )
-                    dest_cell.alignment = openpyxl.styles.Alignment(
-                        horizontal=cell.alignment.horizontal,
-                        vertical=cell.alignment.vertical,
-                        text_rotation=cell.alignment.textRotation,
-                        wrap_text=cell.alignment.wrapText,
-                        shrink_to_fit=cell.alignment.shrinkToFit,
-                        indent=cell.alignment.indent,
-                        relativeIndent=cell.alignment.relativeIndent,
-                        justifyLastLine=cell.alignment.justifyLastLine,
-                        readingOrder=cell.alignment.readingOrder,
-                    )
-                    dest_cell.border = openpyxl.styles.Border(
-                        left=cell.border.left,
-                        right=cell.border.right,
-                        top=cell.border.top,
-                        bottom=cell.border.bottom,
-                        diagonal=cell.border.diagonal,
-                        diagonal_direction=cell.border.diagonal_direction,
-                        start=cell.border.start,
-                        end=cell.border.end
-                    )
-                    dest_cell.fill = openpyxl.styles.PatternFill(
-                        fill_type=cell.fill.fill_type,
-                        start_color=cell.fill.start_color,
-                        end_color=cell.fill.end_color
-                    )
-            tm_wb.close()
-        max_days = datetime.date(int_process_year, int_process_month + 1, 1) - datetime.timedelta(days=1)
-        # print('max days:', max_days.day)
-        for day in range(1, max_days.day + 1):
-            index_of_process_date: int = day + 2
-            # print(needed_sheet_name, index_of_process_date)
-            value = wb[needed_sheet_name].cell(index_of_process_date, 3).value
-
-            if value is None:
-
-                today = datetime.datetime.today()
-                if (today - datetime.datetime(int_process_year, int_process_month, day)).days >= 0:
-                    # print(f'{day}.0{int_process_month}')
-                    if day < 10:
-                        if int_process_month < 10:
-                            all_days.append(f'0{day}.0{int_process_month}.{int_process_year}')
-                        else:
-                            all_days.append(f'0{day}.{int_process_month}.{int_process_year}')
-                    else:
-                        if int_process_month < 10:
-                            all_days.append(f'{day}.0{int_process_month}.{int_process_year}')
-                        else:
-                            all_days.append(f'{day}.{int_process_month}.{int_process_year}')
-
-        """ Безнал по Z - in column C
-            Безнал по БД СПРУТ D
-            Расхождение между Z и БД Спрут E
-            Безнал по Выписке банка F
-            Расхождение между ВБ и БД G
-        """
-    # wb.save(main_excel_file)
-    wb.close()
-
-    return all_days
+from config import tg_token, chat_id, logger, ecp_paths, template_path, owa_username, owa_password, months_normal, saving_path, smtp_host, smtp_author, homebank_login, homebank_password, ip_address
+from tools.net_use import net_use
+from tools.smtp import smtp_send
+from tools.tg import tg_send
+from utils.homebank import homebank, check_homebank_and_collection
+from utils.odines import odines_part, odines_check_with_collection
+from utils.ofd import ofd_distributor
+from utils.sprut_cashbook import open_cashbook
 
 
-def table_create():
-    conn = psycopg2.connect(host=db_host, port=db_port, database=db_name, user=db_user, password=db_pass)
+def create_collection_file(file_path, cur_day):
+    print('CURDAY:', cur_day)
+    current_month: int = int(cur_day.split('.')[1])
+    current_year: int = int(cur_day.split('.')[2])
+    current_month_name = months_normal[current_month]
 
-    table_create = '''CREATE TABLE IF NOT EXISTS ROBOT.ROBOT_SVERKA_BEZNALA_TEST (
-    id text PRIMARY KEY,
-    process_date text,
-    branch_name text,
-    odines_name text,
-    sprut_name text,
-    store_names text,
-    main_excel_file text,
-    status text,
-    retry_count INTEGER,
-    error_message text,
-    comments text,
-    execution_time text,
-    finish_date text,
-    date_created text,
-    executor_name text) '''
-    c = conn.cursor()
-    c.execute(table_create)
-    conn.commit()
-    c.close()
-    conn.close()
+    main_working_file = None
 
+    for item in os.listdir(saving_path):
 
-def read_mapping_excel_file(path):
-    import pandas as pd
-    df = pd.read_excel(path, sheet_name='Свод')
+        if current_month_name in str(item).lower() and str(current_year) in str(item):
 
-    return df
+            if "~$" in item:
+                item = item.replace("~$", "")
 
+            main_working_file = os.path.join(saving_path, item)
 
-def define_executors():
+            break
 
-    executors_name = ['10.70.2.23', '10.70.2.11', '10.70.2.19', '10.70.2.12', '10.70.2.18']
-    executors = dict()
+    if not main_working_file:
+        # * If there is no file related to current month
+        file_name = f"Файл сбора {current_month_name.capitalize()} {current_year}.xlsx"
+        main_working_file = os.path.join(saving_path, file_name)
 
-    branches = ['ШФ33', 'ШФ7', 'АФ8', 'ППФ4', 'АСФ9', 'АСФ6', 'АФ22', 'АФ36', 'ШФ25', 'ШФ10', 'АФ77', 'ШФ34', 'АСФ47', 'АСФ60', 'АФ31', 'АСФ74', 'АФ4', 'АФ30', 'АСФ39', 'АСФ71', 'АФ56', 'ШФ12', 'АФ60', 'ШФ4', 'АФ68', 'АФ82', 'АФ40', 'АФ17', 'АСФ10', 'АСФ24', 'ШФ8', 'АСФ32', 'АСФ69', 'АСФ31', 'АСФ14', 'АСФ35', 'АФ29', 'АФ63', 'АФ84', 'АСФ55', 'АСФ66', 'ШФ26', 'ШФ19', 'АСФ2', 'АФ71', 'АФ61', 'ШФ27', 'ШФ24', 'АСФ21', 'АСФ81', 'АСФ73', 'АФ46', 'АФ19', 'ППФ20', 'АФ12', 'АФ44', 'ППФ7', 'АСФ27', 'АСФ4', 'АФ2', 'АФ39', 'АСФ56', 'АФ80', 'ТФ1', 'АСФ45', 'АФ58', 'АФ50', 'ФКС2', 'АФ65', 'АСФ48', 'ППФ22', 'АФ6', 'АФ76', 'ТФ2', 'АСФ41', 'ППФ16', 'АСФ25', 'ТЗФ2', 'АФ70', 'ППФ2', 'АСФ57', 'АСФ67', 'АСФ1', 'АФ73', 'АФ38', 'АСФ63', 'ППФ9', 'АСФ61', 'АСФ16', 'ШФ6', 'АСФ34', 'АСФ65', 'АФ25', 'АСФ51', 'ППФ11', 'АСФ52', 'АФ7', 'АСФ36', 'АСФ28', 'КФ2', 'ППФ3', 'ТКФ1', 'КФ5', 'АСФ53', 'АФ42', 'АФ49', 'АФ51', 'КФ1', 'АФ59', 'АФ32', 'АФ26', 'ШФ23', 'АСФ20', 'АСФ58', 'АСФ75', 'АФ9', 'АСФ23', 'ШФ1', 'ШФ21',
-                'АСФ80', 'АФ78', 'АСФ46', 'ППФ6', 'АФ20', 'ШФ32', 'ШФ30', 'КФ6', 'АФ48', 'АФ35', 'УКФ2', 'АФ64', 'ШФ35', 'АФ54', 'АФ14', 'АФ66', 'АФ72', 'ППФ18', 'АСФ7', 'АСФ64', 'ППФ1', 'ШФ22', 'ШФ28', 'АСФ72', 'АСФ42', 'АСФ59', 'АФ52', 'АФ62', 'АФ16', 'АФ41', 'УКФ3', 'АФ34', 'КЗФ1', 'ППФ19', 'АСФ29', 'АФ57', 'АФ24', 'АСФ54', 'АСФ5', 'АСФ3', 'АФ45', 'ШФ3', 'АСФ15', 'АСФ17', 'АСФ82', 'АСФ83', 'АФ43', 'АФ21', 'АСФ77', 'АСФ38', 'АФ3', 'АСФ12', 'АСФ70', 'АФ33', 'АСФ50', 'ТЗФ3', 'ППФ8', 'АСФ33', 'ЕКФ1', 'ТФ3', 'ППФ17', 'ППФ5', 'ППФ10', 'АСФ40', 'ШФ9', 'ШФ13', 'АФ69', 'АСФ26', 'АФ75', 'УКФ1', 'АФ15', 'АСФ68', 'АФ47', 'АСФ11', 'АСФ62', 'ШФ20', 'ШФ14', 'АФ23', 'ППФ21', 'ФКС1', 'АСФ13', 'АСФ8', 'ППФ15', 'АСФ18', 'АФ10', 'АФ11', 'АФ37', 'ШФ15', 'АФ53', 'АФ83', 'ШФ2', 'АСФ19', 'ТКФ2', 'АФ18', 'ППФ13', 'АФ67', 'АФ28', 'КФ7', 'ШФ17', 'ШФ5', 'ШФ29', 'АСФ30', 'ШФ18']
+        shutil.copy(template_path, main_working_file)
 
-    l = ceil(len(branches) / len(executors_name))
+    collection_file = load_workbook(main_working_file)
+    collection_sheet = collection_file['Файл сбора']
+    print(f'Main Excel File: {main_working_file}')
+    cols_dict = {
+        'A': 'Компания',
+        'B': 'Дата чека',
+        'C': 'Дата и время чека',
+        'D': 'Сумма с НДС',
+        'E': 'Ерау',
+        'F': '1с',
+        'G': 'офд',
+        'H': 'примечание',
+        'I': '',
+        'J': 'Номер чека',
+        'K': 'Серийный № фиск.регистратора',
+        'L': 'Клиент',
+        'M': 'Дата создания записи',
+        'N': 'Состояние розничного чека'
+    }
 
-    print(len(branches), l)
+    df = pd.read_excel(file_path)
 
-    for i in range(len(executors_name)):
+    if df.columns[0] != 'Компания':
+        df = pd.read_excel(file_path, header=1)
 
-        br = []
-
-        for j in range(l):
-
-            try:
-                br.append(branches[0])
-                branches.remove(branches[0])
-            except:
-                pass
-
-        executors.update({executors_name[i]: br})
-
-    return executors
-
-
-def dispatcher():
-
-    print("Dispatcher starts")
-
-    table_create()
-
-    executors = define_executors()
-
-    # process_date = datetime.datetime.strptime("26.07.2023", "%d.%m.%Y")
-
-    # str_process_date = process_date.strftime("%d.%m.%Y")
-
-    main_directory_folder = "\\\\vault.magnum.local\\Common\\Stuff\\_06_Бухгалтерия\\Для робота\\Процесс безнала\\отчеты 2023"
-
-    files = os.listdir(main_directory_folder)
-
-    df = read_mapping_excel_file("\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-beznala\\маппинг для сверки безнала.xlsx")
-
-    list_of_lost_records = []
-    tr_count = 0
     for i, row in df.iterrows():
-        record_found = False
-        file_name = None
-        for file in files:
-            name_no_spaces = str(file).replace(" ", "")
-            search = f"{str(row[1]).replace(' ', '')}Сверкапобезналичной"
-            # Mistake if КФ1 and ЕКФ1 exists
 
-            if name_no_spaces.startswith(search):
+        last_row = collection_sheet.max_row + 1
 
-                if "~$" in file:
-                    continue
-                file_name = file
-                record_found = True
+        for col_key, col_name in cols_dict.items():
 
-                break
-        if record_found:
-            # find_query = f"Select process_date from ROBOT.ROBOT_SVERKA_BEZNALA_TEST where process_date='{str_process_date}' AND branch_name='{row[1]}' AND odines_name= '{row[2]}' AND sprut_name= '{row[3]}'"
-            conn = psycopg2.connect(host=db_host, port=db_port, database=db_name, user=db_user, password=db_pass)
-            c = conn.cursor()
-            # c.execute(find_query)
-            # result = c.fetchone()
+            source_cell = collection_sheet.cell(row=last_row - 1, column=collection_sheet[col_key + '1'].column)
+            new_cell = collection_sheet.cell(row=last_row, column=collection_sheet[col_key + '1'].column)
+
+            new_cell._style = copy(source_cell._style)
+            new_cell.font = copy(source_cell.font)
+            new_cell.border = copy(source_cell.border)
+            new_cell.alignment = copy(source_cell.alignment)
+
+            cell = collection_sheet[f'{col_key}{last_row}']
             try:
-                result = a(os.path.join(main_directory_folder, file_name))
+                print('#1', row[col_name])
+                cell.value = row[col_name]
+                cell.alignment = copy(source_cell.alignment)
             except:
-                print(f'BRANCH {file_name} IS CLOSED!!!')
-                result = None
-            str_now = datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')
-            if result is not None:
-                for day in result:
-                    for executor in executors:
-                        if row[1] in executors.get(executor):
-                            insert_q = f"Insert Into ROBOT.ROBOT_SVERKA_BEZNALA (id, process_date, branch_name, odines_name, sprut_name, store_names, main_excel_file, status, retry_count, date_created, executor_name) values ('{uuid.uuid4()}', '{day}','{row[1]}','{row[2]}', '{row[3]}','{row[4]}','{os.path.join(main_directory_folder, file_name)}', 'New', 0, '{str_now}', '{executor}')"
-                            c.execute(insert_q)
-                            conn.commit()
-                c.close()
-                conn.close()
-                tr_count += 1
-        else:
-            list_of_lost_records.append(str(row[1]))
-    print(f"Добавили {tr_count} в db")
+                cell.value = None
+
+    collection_file.save(main_working_file)
+
+    return main_working_file
 
 
 if __name__ == '__main__':
-    dispatcher()
+
+    months = {
+        '172.20.1.24': [2, 3, 4],
+        '10.70.2.11': [1, 2, 3, 4, 5, 6],
+        '10.70.2.2': [2, 7],
+        '10.70.2.9': [3, 12],
+        '10.70.2.19': [4, 5],
+        '10.70.2.10': [4, 6]
+    }
+
+    for month in [10, 11, 12, 1, 2, 3, 4, 5, 6, 7]:
+        year = 2022 if month >= 10 else 2023
+        if month == 12:
+            max_days = datetime.datetime(year + 1, 1, 1) - datetime.timedelta(days=1)
+        else:
+            max_days = datetime.datetime(year, month + 1, 1) - datetime.timedelta(days=1)
+
+        if month not in months.get(ip_address):
+            continue
+        print(month, max_days.day)
+        # continue
+
+        for days in range(1, max_days.day + 1):
+            try:
+                if month == 11 and days < 18:
+                    continue
+                # today = datetime.datetime.today().strftime('%d.%m.%Y')
+                # today1 = datetime.datetime.today().strftime('%d.%m.%y')
+
+                if days < 10:
+                    if month < 10:
+                        today = f'0{days}.0{month}.{year}'
+                        today1 = f'0{days}.0{month}.{str(year)[:-2]}'
+                    else:
+                        today = f'0{days}.{month}.{year}'
+                        today1 = f'0{days}.{month}.{str(year)[:-2]}'
+                else:
+                    if month < 10:
+                        today = f'{days}.0{month}.{year}'
+                        today1 = f'{days}.0{month}.{str(year)[:-2]}'
+                    else:
+                        today = f'{days}.{month}.{year}'
+                        today1 = f'{days}.{month}.{str(year)[:-2]}'
+
+                print('Start day', today)
+
+                # logger.warning(f'Started processing {day}')
+
+                # today = datetime.datetime.now().date()
+
+                day_ = int(today.split('.')[0])
+                month_ = int(today.split('.')[1])
+                year_ = int(today.split('.')[2])
+
+                today = datetime.date(year_, month_, day_)
+
+                cashbook_day = (today - datetime.timedelta(days=5)).strftime('%d.%m.%Y')
+
+                days = []
+
+                for i in range(7, 1, -1):
+                    day = (today - datetime.timedelta(days=i)).strftime('%d.%m.%Y')
+                    days.append(day)
+
+                today = today.strftime('%d.%m.%Y')
+                # logger.warning(today, cashbook_day)
+                print(cashbook_day)
+                print(days)
+                print('==========================\n')
+
+                # continue
+                # days.append('11.08.2023')
+                # days = ['12.08.2023']
+                logger.info(days)
+
+                # net_use(Path(template_path).parent, owa_username, owa_password)
+                # net_use(ecp_paths, owa_username, owa_password)
+
+                tg_send(f'Робот запустился - <b>{today} | {ip_address}</b>\n\nДата для выгрузки чеков из Спрута - <b>{cashbook_day}</b>\n\nДата проверки в 1С - <b>{days}</b>', bot_token=tg_token, chat_id=chat_id)
+
+                if True:
+
+                    # * ----- 1 -----
+                    try:
+                        filepath = open_cashbook(cashbook_day)
+                    except:
+                        logger.warning(f"{days} - Пусто в Розничных чеках за {cashbook_day}")
+                        continue
+                    # filepath = filepath.replace('Documents', 'Downloads') # If you are compiling for the virtual machines
+
+                    # * ----- 2 -----
+                    main_file = create_collection_file(filepath, today)
+                    Path(filepath).unlink()
+
+                    # # * ----- 3 -----
+                    # logger.warning('Начали Epay')
+                    logger.info('Начали Epay')
+                    for tries in range(5):
+                        with suppress(Exception):
+                            filepath = homebank(homebank_login, homebank_password, days[0], days[-1])
+                            break
+                    # main_file = r'\\vault.magnum.local\Common\Stuff\_06_Бухгалтерия\Для робота\Процесс Сверка ОПТа'
+                    check_homebank_and_collection(filepath, main_file)
+                    Path(filepath).unlink()
+
+                    # # * ----- 4 -----
+                    # logger.warning('Начали 1C')
+                    # logger.info('Начали 1C')
+                    for tries in range(5):
+                        if True:
+
+                            all_days = odines_part(days, month_)
+
+                            odines_check_with_collection(all_days, main_file)
+                            break
+
+                        # except Exception as err:
+                        #     print("ERROR:", err)
+                        #     logger.warning(f"ERROR OCCURED: {err}")
+
+                    # * ----- 5 -----
+                    # logger.warning('Начали ОФД')
+                    logger.info('Начали ОФД')
+
+                    for tries in range(5):
+                        with suppress(Exception):
+                            ofd_distributor(main_file)
+                            break
+
+                    # smtp_send(fr"""Добрый день!
+                    # Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
+                    #           to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
+                    #           subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+
+                    logger.warning(f'Законичили отработку за {today} на машине {ip_address}')
+
+                # except Exception as error:
+                    # smtp_send(fr"""Добрый день!
+                    #                Сверка ОПТа за {today} - ОШИБКА!!!""",
+                    #           to=['Abdykarim.D@magnum.kz', 'Mukhtarova@magnum.kz'],
+                    #           subject=f'ОШИБКА Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+                    # tg_send(f'Возникла ошибка - {error}', bot_token=tg_token, chat_id=chat_id)
+                    # raise error
+            except Exception as e:
+                logger.warning(f'Ошибка на машине {ip_address}: {str(e)}')
