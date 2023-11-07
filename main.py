@@ -29,7 +29,7 @@ def create_collection_file(file_path, cur_day):
 
     for item in os.listdir(saving_path):
 
-        if current_month_name in str(item).lower():
+        if current_month_name in str(item).lower() and str(current_year) in str(item):
 
             if "~$" in item:
                 item = item.replace("~$", "")
@@ -99,17 +99,17 @@ def create_collection_file(file_path, cur_day):
 
 if __name__ == '__main__':
 
-    for days in range(1):
+    for days in range(1, 7):
 
         today = datetime.datetime.today().strftime('%d.%m.%Y')
         today1 = datetime.datetime.today().strftime('%d.%m.%y')
 
-        # if days < 10:
-        #     today = f'0{days}.10.2023'
-        #     today1 = f'0{days}.10.23'
-        # else:
-        #     today = f'{days}.10.2023'
-        #     today1 = f'{days}.10.23'
+        if days < 10:
+            today = f'0{days}.11.2023'
+            today1 = f'0{days}.11.23'
+        else:
+            today = f'{days}.11.2023'
+            today1 = f'{days}.11.23'
 
         calendar = pd.read_excel(f'\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-opta\\Производственный календарь 20{today1[-2:]}.xlsx')
 
@@ -176,18 +176,11 @@ if __name__ == '__main__':
                 if True:
 
                     # * ----- 1 -----
-                    try:
-                        filepath = open_cashbook(cashbook_day)
-                    except:
+                    filepath = open_cashbook(cashbook_day)
 
-                        logger.warning(f"{days} - Пусто в Розничных чеках за {cashbook_day}")
-                        smtp_send(fr"""Добрый день!
-                                Сверка ОПТа за {today} - Пусто в Розничных чеках за {cashbook_day}""",
-                                  to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
-                                  subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+                    if filepath == '':
+                        continue
 
-                        logger.warning(f'Законичили отработку за {today}')
-                        break
                     filepath = filepath.replace('Documents', 'Downloads') # If you are compiling for the virtual machines
 
                     # * ----- 2 -----
@@ -229,10 +222,10 @@ if __name__ == '__main__':
                             ofd_distributor(main_file)
                             break
 
-                    smtp_send(fr"""Добрый день!
-                    Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
-                              to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
-                              subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+                    # smtp_send(fr"""Добрый день!
+                    # Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
+                    #           to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
+                    #           subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
 
                     logger.warning(f'Законичили отработку за {today}')
 

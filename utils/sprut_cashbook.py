@@ -163,15 +163,17 @@ def open_cashbook(today):
 
         wait_loading(file_path)
 
+        os.system('taskkill /im excel.exe /f')
+
         sprut.quit()
 
         return file_path
 
-    finally:
+    except:
 
         sprut.quit()
 
-        raise Exception("Empty Sprut")
+        return ''
 
 
 def wait_loading(filepath):
