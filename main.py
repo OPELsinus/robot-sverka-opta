@@ -20,7 +20,6 @@ from utils.sprut_cashbook import open_cashbook
 
 
 def create_collection_file(file_path, cur_day):
-
     current_month: int = int(cur_day.split('.')[1])
     current_year: int = int(cur_day.split('.')[2])
     current_month_name = months_normal[current_month]
@@ -99,17 +98,17 @@ def create_collection_file(file_path, cur_day):
 
 if __name__ == '__main__':
 
-    for days in range(1, 7):
+    for days in range(1):
 
         today = datetime.datetime.today().strftime('%d.%m.%Y')
         today1 = datetime.datetime.today().strftime('%d.%m.%y')
-
-        if days < 10:
-            today = f'0{days}.11.2023'
-            today1 = f'0{days}.11.23'
-        else:
-            today = f'{days}.11.2023'
-            today1 = f'{days}.11.23'
+        #
+        # if days < 10:
+        #     today = f'0{days}.11.2023'
+        #     today1 = f'0{days}.11.23'
+        # else:
+        #     today = f'{days}.11.2023'
+        #     today1 = f'{days}.11.23'
 
         calendar = pd.read_excel(f'\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-opta\\Производственный календарь 20{today1[-2:]}.xlsx')
 
@@ -159,8 +158,9 @@ if __name__ == '__main__':
 
                 today = today.strftime('%d.%m.%Y')
                 # logger.warning(today, cashbook_day)
-                logger.info(cashbook_day)
-                logger.info(days)
+                print(f'Cahsbook: {cashbook_day}')
+                logger.warning(f'Cahsbook: {cashbook_day}')
+                logger.warning(days)
                 logger.info('==========================\n')
 
                 # continue
@@ -176,12 +176,22 @@ if __name__ == '__main__':
                 if True:
 
                     # * ----- 1 -----
+                    logger.warning('Начали Спрут')
+                    logger.info('Начали Спрут')
+
                     filepath = open_cashbook(cashbook_day)
 
                     if filepath == '':
+                        smtp_send(fr"""Добрый день!
+                                    Сверка ОПТа за {today} завершилась - Пусто в Розничных чеках""",
+                                  to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
+                                  subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+
+                        logger.warning(f'Законичили отработку за {today} - Пусто в Розничных чеках')
                         continue
 
-                    filepath = filepath.replace('Documents', 'Downloads') # If you are compiling for the virtual machines
+                    # ! Uncomment, if you are compiling for the virtual machines
+                    filepath = filepath.replace('Documents', 'Downloads')
 
                     # * ----- 2 -----
                     main_file = create_collection_file(filepath, today)
@@ -203,7 +213,6 @@ if __name__ == '__main__':
                     logger.info('Начали 1C')
                     for tries in range(5):
                         if True:
-
                             all_days = odines_part(days)
 
                             odines_check_with_collection(all_days, main_file)
@@ -222,20 +231,20 @@ if __name__ == '__main__':
                             ofd_distributor(main_file)
                             break
 
-                    # smtp_send(fr"""Добрый день!
-                    # Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
-                    #           to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
-                    #           subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+                    smtp_send(fr"""Добрый день!
+                    Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
+                              to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
+                              subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
 
                     logger.warning(f'Законичили отработку за {today}')
 
                 # except Exception as error:
-                    # smtp_send(fr"""Добрый день!
-                    #                Сверка ОПТа за {today} - ОШИБКА!!!""",
-                    #           to=['Abdykarim.D@magnum.kz', 'Mukhtarova@magnum.kz'],
-                    #           subject=f'ОШИБКА Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
-                    # tg_send(f'Возникла ошибка - {error}', bot_token=tg_token, chat_id=chat_id)
-                    # raise error
+                # smtp_send(fr"""Добрый день!
+                #                Сверка ОПТа за {today} - ОШИБКА!!!""",
+                #           to=['Abdykarim.D@magnum.kz', 'Mukhtarova@magnum.kz'],
+                #           subject=f'ОШИБКА Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+                # tg_send(f'Возникла ошибка - {error}', bot_token=tg_token, chat_id=chat_id)
+                # raise error
 
         else:
             print(1)
