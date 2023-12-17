@@ -76,7 +76,7 @@ def homebank(email, password, start_date, end_date):
 
     web.find_element("(//span[@class='src-pages-statements-styles_status-column'])[1]").click()
     logger.info('clicked downloading')
-    filepath = ''
+    filepath = None
     found = False
     while True:
         for file in os.listdir(download_path):
@@ -99,7 +99,7 @@ def check_homebank_and_collection(filepath_, main_file):
     df = pd.read_excel(filepath_)
 
     df.columns = df.iloc[10]
-
+    count = 0
     for row in range(3, collection_sheet.max_row + 1):
 
         if collection_sheet[f'E{row}'].value is not None:
@@ -114,14 +114,20 @@ def check_homebank_and_collection(filepath_, main_file):
 
         collection_sheet[f'E{row}'].value = 'нет'
         # logger.info(filtered_df)
-        for times in filtered_df['Дата/время транз.']:
-
+        print("DF:")
+        print(new_df['Дата/время транз.'])
+        print(filtered_df)
+        print()
+        for ind, times in enumerate(new_df['Дата/время транз.']):
+            print('###', ind, times)
             collection_date, homebank_date = collection_sheet[f'C{row}'].value, times
 
             time_diff = check_time_diff(collection_date, homebank_date, 5)
-            if time_diff:
+            print('TIME', time_diff, (collection_sheet[f'D{row}'].value == new_df['Оплачено'].iloc[ind]), (collection_sheet[f'D{row}'].value - int(collection_sheet[f'I{row}'].value) == new_df['Оплачено'].iloc[ind]))
+            if time_diff and (collection_sheet[f'D{row}'].value == new_df['Оплачено'].iloc[ind] or collection_sheet[f'D{row}'].value - int(collection_sheet[f'I{row}'].value) == new_df['Оплачено'].iloc[ind]):
                 logger.info(time_diff)
                 collection_sheet[f'E{row}'].value = 'да'
                 break
+        count += 1
 
     collection_file.save(main_file)

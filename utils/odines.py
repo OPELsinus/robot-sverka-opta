@@ -2,6 +2,7 @@ from contextlib import suppress
 from time import sleep
 
 from openpyxl import load_workbook
+from pywinauto import keyboard
 
 from config import logger, ip_address
 from core import Odines
@@ -67,132 +68,159 @@ def odines_part(days):
 
     app.find_element({"title": "", "class_name": "", "control_type": "Table", "visible_only": True, "enabled_only": True, "found_index": 0}).click()
 
-    # for _ in range(15):
-    #     app.find_element({"title": "", "class_name": "", "control_type": "Table", "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys(app.keys.PAGE_UP)
-
     found = False
-    # for _ in range(6):
-
-    els = app.find_elements({"title_re": ".* Дата", "class_name": "", "control_type": "Custom",
-                             "visible_only": True, "enabled_only": True}, timeout=3)
-
+    cc = 0
     all_days = []
+    for _ in range(1):
 
-    for i in els:
+        els = app.find_elements({"title_re": ".* Дата", "class_name": "", "control_type": "Custom",
+                                 "visible_only": True, "enabled_only": True}, timeout=3)
+        print('KEK:', _, len(els), els)
 
-        clipboard_set("")
-        i.type_keys("^c", click=True, clear=False)
+        last_el = None
 
-        get_report_date = clipboard_get()
-        get_report_date = str(get_report_date).strip()[:10]
-        logger.info(get_report_date)
+        for i in els:
 
-        if get_report_date in days:
+            clipboard_set("")
+            i.type_keys("^c", click=True, clear=False, set_focus=True)
 
-            found = True
+            get_report_date = clipboard_get()
+            get_report_date = str(get_report_date).strip()[:10]
+            logger.info(get_report_date)
 
-            transaction_dict = dict()
+            if get_report_date in days:
 
-            i.click(double=True)
+                found = True
 
-            sleep(0.5)
+                transaction_dict = dict()
 
-            app.parent_switch({"title": "", "class_name": "", "control_type": "Pane",
-                               "visible_only": True, "enabled_only": True}, resize=True, set_focus=True, maximize=True)
+                for tries in range(2):
+                    try:
+                        i.click(double=True)
 
-            with suppress(Exception):
-                app.find_element({"title": "Развернуть", "class_name": "", "control_type": "Button",
-                                  "visible_only": True, "enabled_only": True}, timeout=3).click()
+                        sleep(0.5)
 
-            # ? Собираем все даты транзакций и их суммы
-            transactions = app.find_elements({"title_re": ".* Дата транзакции$", "class_name": "", "control_type": "Custom",
-                                              "visible_only": True, "enabled_only": True}, timeout=10)
+                        app.parent_switch({"title": "", "class_name": "", "control_type": "Pane",
+                                           "visible_only": True, "enabled_only": True}, resize=True, set_focus=True, maximize=True)
 
-            print(transactions)
+                        with suppress(Exception):
+                            app.find_element({"title": "Развернуть", "class_name": "", "control_type": "Button",
+                                              "visible_only": True, "enabled_only": True}, timeout=3).click()
 
-            print(len(transactions))
+                        # ? Собираем все даты транзакций и их суммы
+                        transactions = app.find_elements({"title_re": ".* Дата транзакции$", "class_name": "", "control_type": "Custom",
+                                                          "visible_only": True, "enabled_only": True}, timeout=10)
+                        break
+                    except:
+                        last_el.click()
+                        print('KEK HERE DOWN', i, last_el)
+                        keyboard.send_keys("{DOWN}" * 5)
+                        pass
 
-            summs = app.find_elements({"title_re": ".* Сумма$", "class_name": "", "control_type": "Custom",
-                                       "visible_only": True, "enabled_only": True}, timeout=5)
+                print(transactions)
 
-            print(summs)
-            print(len(summs))
+                print(len(transactions))
 
-            for ind, transaction in enumerate(transactions):
-                if True:
-                    logger.info('-------------------------------------------')
-                    clipboard_set("")
-                    transaction.type_keys("^c", click=True, clear=False)
-                    transaction.type_keys(app.keys.DOWN, click=True, clear=False)
+                try:
+                    summs = app.find_elements({"title_re": ".* Сумма$", "class_name": "", "control_type": "Custom",
+                                               "visible_only": True, "enabled_only": True}, timeout=5)
+                except:
+                    logger.warning(str(all_days))
+                    return all_days
 
-                    transaction_date = clipboard_get()
-                    transaction_date = str(transaction_date).strip()
-                    logger.info(f'Transaction {transaction}: {transaction_date}')
+                print(summs)
+                print(len(summs))
 
-                    clipboard_set("")
-                    logger.info('Clicking on', ind, summs[ind])
-                    summs[ind].type_keys("^c", click=True, clear=False)
+                for ind, transaction in enumerate(transactions):
 
-                    summ = clipboard_get()
-                    summ = round(float(str(summ).replace(' ', '').replace(',', '.').replace(' ', '')))
-                    logger.info('Sum:', summ)
-                    logger.info('-------------------------------------------')
+                    if True:
+                        logger.info('-------------------------------------------')
+                        clipboard_set("")
+                        transaction.type_keys("^c", click=True, clear=False)
+                        transaction.type_keys(app.keys.DOWN, click=True, clear=False)
 
-                    transaction_dict.update({transaction_date: summ})
+                        transaction_date = clipboard_get()
+                        transaction_date = str(transaction_date).strip()
+                        logger.info(f'Transaction {transaction}: {transaction_date}')
 
-                    if ind == 17:
-                        for scroll in range(10):
-                            transaction.type_keys(app.keys.DOWN, click=True, clear=False)
-                # except Exception as err:
-                #     print(f'ERROR: {err}')
+                        clipboard_set("")
+                        logger.info('Clicking on', ind, summs[ind])
+                        summs[ind].type_keys("^c", click=True, clear=False)
 
-            app.find_element({"title": "Закрыть", "class_name": "", "control_type": "Button",
-                              "visible_only": True, "enabled_only": True}).click()
+                        summ = clipboard_get()
+                        summ = round(float(str(summ).replace(' ', '').replace(',', '.').replace(' ', '')))
+                        logger.info('Sum:', summ)
+                        logger.info('-------------------------------------------')
 
-            app.parent_back(1)
+                        transaction_dict.update({transaction_date: summ})
 
-            all_days.append(transaction_dict)
+                        if ind == 17:
+                            for scroll in range(10):
+                                transaction.type_keys(app.keys.DOWN, click=True, clear=False)
+                    # except Exception as err:
+                    #     print(f'ERROR: {err}')
 
-        elif found:
-            break
+                app.find_element({"title": "Закрыть", "class_name": "", "control_type": "Button",
+                                  "visible_only": True, "enabled_only": True}).click()
+
+                app.parent_back(1)
+
+                all_days.append(transaction_dict)
+
+            elif found:
+                cc += 1
+                print('BROKEN')
+                if cc >= 1:
+                    break
+
+            last_el = i
 
         # app.find_element({"title": "", "class_name": "", "control_type": "Table", "visible_only": True, "enabled_only": True, "found_index": 0}).click()
         #
         app.find_element({"title": "", "class_name": "", "control_type": "Table", "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys(app.keys.DOWN)
-        # app.find_element({"title": "", "class_name": "", "control_type": "Table", "visible_only": True, "enabled_only": True, "found_index": 0}).type_keys(app.keys.PAGE_DOWN)
 
     app.quit()
     logger.warning('FINISHING 1C')
     logger.info(all_days)
     logger.warning('FINISHING 1C.1')
+    logger.warning(str(all_days))
     return all_days
 
 
-def odines_check_with_collection(all_days_, main_file):
+def odines_check_with_collection(all_days_, days, main_file):
     logger.warning('Started checking 1C')
     collection_file = load_workbook(main_file)
 
     collection_sheet = collection_file['Файл сбора']
 
     logger.info(collection_sheet.max_row)
+    count = 0
 
     for row in range(3, collection_sheet.max_row + 1):
 
         if collection_sheet[f'F{row}'].value is not None:
             continue
-
         collection_sheet[f'F{row}'].value = 'нет'
         for day_ in all_days_:
+
             for single_day in day_:
+                single_day_ = single_day.split(' ')[0]
+                print('DAYS:', single_day_, collection_sheet[f'B{row}'].value, days, single_day_ not in days, collection_sheet[f'B{row}'].value not in days, sep=' | ')
+
+                if single_day_ != collection_sheet[f'B{row}'].value:
+                    continue
 
                 print(collection_sheet[f'C{row}'].value)
                 time_diff = check_time_diff(collection_sheet[f'C{row}'].value, single_day, 5)
 
-                if time_diff and abs(day_.get(single_day) - round(collection_sheet[f'D{row}'].value)) <= 1:
+                print(time_diff, (abs(day_.get(single_day) - round(collection_sheet[f'D{row}'].value)) <= 1 or abs(day_.get(single_day) - round(collection_sheet[f'D{row}'].value)) - int(collection_sheet[f'I{row}'].value) <= 1))
+                if time_diff and (abs(day_.get(single_day) - round(collection_sheet[f'D{row}'].value)) <= 1 or abs(day_.get(single_day) - round(collection_sheet[f'D{row}'].value)) - int(collection_sheet[f'I{row}'].value) <= 1):
                     logger.info('--------------------------------------------------------------------------')
                     logger.info(f"{single_day}, {collection_sheet[f'C{row}'].value}, {day_.get(single_day)},"
                                 f"{collection_sheet[f'D{row}'].value}, {time_diff}")
                     collection_sheet[f'F{row}'].value = 'да'
 
+        count += 1
     collection_file.save(main_file)
     logger.info('--------------------------------------------------------------------------')
+

@@ -80,9 +80,8 @@ def ofd_distributor(main_file):
 
     mapping_file = pd.read_excel(mapping_path)
     logger.info(mapping_file.columns)
+    count = 0
     for row in range(3, collection_sheet.max_row + 1):
-
-        print(collection_sheet[f'G{row}'].value)
 
         if collection_sheet[f'G{row}'].value is not None:
             continue
@@ -112,25 +111,29 @@ def ofd_distributor(main_file):
             print('kazakhtelekom')
             collection_sheet[f'G{row}'].value = 'нет'
             try:
-                open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign)
+                open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign, count)
             except:
                 logger.warning(f'FAILED OFD at {seacrh_date}, {row}, {ecp_auth}')
                 raise Exception('FAILED OFD')
-
+            count += 1
         elif ofd_operator == 'Транстелеком':
 
             print('trans')
             collection_sheet[f'G{row}'].value = 'нет'
             try:
-                open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign)
+                open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign, count)
             except:
                 logger.warning(f'FAILED OFD at {seacrh_date}, {row}, {ecp_auth}')
                 raise Exception('FAILED OFD')
+            count += 1
+
+        if row % 2 == 0:
+            collection_file.save(main_file)
 
     collection_file.save(main_file)
 
 
-def open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign):
+def open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign, count):
 
     web = Web()
 
@@ -178,15 +181,18 @@ def open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign):
             # Сори за такие длинные выражения xD
             time_diff = check_time_diff(collection_sheet[f'C{row}'].value, datetime.datetime.strptime(dates[ind].get_attr('text'), '%Y-%m-%d %H:%M:%S').strftime('%d.%m.%Y %H:%M:%S'), 5)
 
-            if summ_ == int(collection_sheet[f'D{row}'].value) and time_diff:
+            if (summ_ == int(collection_sheet[f'D{row}'].value) or summ_ == int(collection_sheet[f'D{row}'].value) + int(collection_sheet[f'I{row}'].value) or summ_ == int(collection_sheet[f'D{row}'].value) + int(collection_sheet[f'I{row}'].value)) and time_diff:
                 logger.info(dates[ind].get_attr('text'))
                 logger.info(summs[ind].get_attr('text'))
                 collection_sheet[f'G{row}'].value = 'да'
-                logger.info('----------------------------------------------')
+                logger.warning(f'Saved {row}')
+                logger.warning('----------------------------------------------')
         sleep(1)
 
+    web.quit()
 
-def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign):
+
+def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign, count):
 
     web = Web()
 
@@ -210,6 +216,7 @@ def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_si
         web.find_element("//button[contains(text(), 'Проверить')]").click()
 
     with suppress(Exception):
+
         app = App('')
 
         app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
@@ -221,7 +228,7 @@ def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_si
                           "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=10).type_keys('Aa123456', app.keys.ENTER)
         app = None
 
-    web.find_element("//input[contains(@placeholder, 'Магазин, касса')]").type_keys(str(collection_sheet[f'K{row}'].value).replace(' ', ''), web.keys.ENTER)  # Filling serial number
+    web.find_element("//input[contains(@placeholder, 'Магазин, касса')]", timeout=150).type_keys(str(collection_sheet[f'K{row}'].value).replace(' ', ''), web.keys.ENTER)  # Filling serial number
 
     web.find_element("(//a[@class='kkm'])[1]").click()  # Find & click on the first element
     # sleep(100)
@@ -232,16 +239,25 @@ def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_si
     day = seacrh_date.split('.')[0]
 
     # ? С помощью JS меняем поля дат и url на нужную нам дату
+    year1 = year
+    month1 = month
+    day1 = day
     web.set_elements_innerhtml_or_value('//*[@id="mat-input-0"]', element_type='value', date=f'{year}-{month}-{day}T00:00:00', value=f'{int(day)}.{int(month)}.{year}')
-    web.set_elements_innerhtml_or_value('//*[@id="mat-input-1"]', element_type='value', date=f'{year}-{month}-{day}T23:59:59', value=f'{int(day)}.{int(month)}.{year}')
+    web.set_elements_innerhtml_or_value('//*[@id="mat-input-1"]', element_type='value', date=f'{year1}-{month1}-{day1}T23:59:59', value=f'{int(day1)}.{int(month1)}.{year1}')
     web.set_elements_innerhtml_or_value("//input[@ng-reflect-name='shiftNumber']", element_type='innerHTML', value='')
+    print('Nomer:', str(collection_sheet[f'K{row}'].value).replace(' ', ''))
     print('URL:', web.driver.current_url, end=' - ')
-    new_url = web.driver.current_url.split('?')[0] + f'?startDate={year}-{month}-{day}T00:00:00&endDate={year}-{month}-{day}T23:59:59&page=1'
-    print(new_url)
+    new_url = web.driver.current_url.split('?')[0] + f'?startDate={year}-{month}-{day}T00:00:00&endDate={year1}-{month1}-{day1}T23:59:59&page=1'
+    print('New url:', new_url)
     web.get(new_url)
     web.get(new_url)
     web.driver.refresh() # Обновляем, чтобы данные точно прогрузились
 
+    # web.find_element("//input[contains(@placeholder, 'Фискальный признак чека')]").type_keys(str(collection_sheet[f'K{row}'].value).replace(' ', ''), web.keys.ENTER)  # Filling serial number
+
+    while True:
+        if not web.wait_element("//span[contains(text(), 'Загружаем')]", timeout=1):
+            break
     transactions = web.find_elements("//div[@class='transaction-wrapper ng-star-inserted']", timeout=40)
     times = web.find_elements("//div[@class='transaction-wrapper ng-star-inserted']/tax-transaction/div/span/span", timeout=1)
     summs = web.find_elements("//div[@class='transaction-wrapper ng-star-inserted']//span[@class='transaction__sum ng-star-inserted']", timeout=1)
@@ -253,10 +269,13 @@ def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_si
 
         sleep(.1)
 
-        if check_time_diff(seacrh_date + time_, collection_sheet[f'C{row}'].value, 5) and summ_ == int(collection_sheet[f'D{row}'].value):
+        if check_time_diff(seacrh_date + time_, collection_sheet[f'C{row}'].value, 5) and (summ_ == int(collection_sheet[f'D{row}'].value) or summ_ == int(collection_sheet[f'D{row}'].value) + int(collection_sheet[f'I{row}'].value) or summ_ == int(collection_sheet[f'D{row}'].value) + int(collection_sheet[f'I{row}'].value)):
             logger.info(f"{seacrh_date + time_} {summ_}")
             logger.info(f"{check_time_diff(seacrh_date + time_, collection_sheet[f'C{row}'].value, 5)}")
             collection_sheet[f'G{row}'].value = 'да'
+            logger.warning(f'Saved {row}')
+            logger.warning('-----------------------------------------------------------------------------')
 
-    # sleep(10000)
-    logger.info('-----------------------------------------------------------------------------')
+    web.quit()
+
+    sleep(1)

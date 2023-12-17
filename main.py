@@ -179,19 +179,19 @@ if __name__ == '__main__':
                     logger.warning('Начали Спрут')
                     logger.info('Начали Спрут')
 
-                    filepath = open_cashbook(cashbook_day)
+                    filepath, bonuses = open_cashbook(cashbook_day)
 
                     if filepath == '':
-                        smtp_send(fr"""Добрый день!
-                                    Сверка ОПТа за {today} завершилась - Пусто в Розничных чеках""",
-                                  to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
-                                  subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+                        # smtp_send(fr"""Добрый день!
+                        #             Сверка ОПТа за {today} завершилась - Пусто в Розничных чеках""",
+                        #           to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
+                        #           subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
 
                         logger.warning(f'Законичили отработку за {today} - Пусто в Розничных чеках')
                         continue
 
                     # ! Uncomment, if you are compiling for the virtual machines
-                    filepath = filepath.replace('Documents', 'Downloads')
+                    # filepath = filepath.replace('Documents', 'Downloads')
 
                     # * ----- 2 -----
                     main_file = create_collection_file(filepath, today)
@@ -205,7 +205,7 @@ if __name__ == '__main__':
                             filepath = homebank(homebank_login, homebank_password, days[0], days[-1])
                             break
 
-                    check_homebank_and_collection(filepath, main_file)
+                    check_homebank_and_collection(filepath, main_file, bonuses)
                     Path(filepath).unlink()
 
                     # * ----- 4 -----
@@ -215,7 +215,7 @@ if __name__ == '__main__':
                         if True:
                             all_days = odines_part(days)
 
-                            odines_check_with_collection(all_days, main_file)
+                            odines_check_with_collection(all_days, main_file, bonuses)
                             break
 
                         # except Exception as err:
@@ -228,13 +228,13 @@ if __name__ == '__main__':
 
                     for tries in range(5):
                         with suppress(Exception):
-                            ofd_distributor(main_file)
+                            ofd_distributor(main_file, bonuses)
                             break
 
-                    smtp_send(fr"""Добрый день!
-                    Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
-                              to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
-                              subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
+                    # smtp_send(fr"""Добрый день!
+                    # Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
+                    #           to=['Abdykarim.D@magnum.kz', 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'],
+                    #           subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
 
                     logger.warning(f'Законичили отработку за {today}')
 
