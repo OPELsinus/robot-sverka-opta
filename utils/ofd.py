@@ -229,7 +229,7 @@ def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_si
         app = None
 
     web.find_element("//input[contains(@placeholder, 'Магазин, касса')]", timeout=150).type_keys(str(collection_sheet[f'K{row}'].value).replace(' ', ''), web.keys.ENTER)  # Filling serial number
-
+    sleep(5)
     web.find_element("(//a[@class='kkm'])[1]").click()  # Find & click on the first element
     # sleep(100)
     logger.info(f"{seacrh_date} {seacrh_date.split('.')}")

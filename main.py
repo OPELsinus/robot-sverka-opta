@@ -98,17 +98,17 @@ def create_collection_file(file_path, cur_day):
 
 if __name__ == '__main__':
 
-    for days in range(1):
+    for days in range(6, 31):
 
         today = datetime.datetime.today().strftime('%d.%m.%Y')
         today1 = datetime.datetime.today().strftime('%d.%m.%y')
-        #
-        # if days < 10:
-        #     today = f'0{days}.11.2023'
-        #     today1 = f'0{days}.11.23'
-        # else:
-        #     today = f'{days}.11.2023'
-        #     today1 = f'{days}.11.23'
+
+        if days < 10:
+            today = f'0{days}.12.2023'
+            today1 = f'0{days}.12.23'
+        else:
+            today = f'{days}.12.2023'
+            today1 = f'{days}.12.23'
 
         calendar = pd.read_excel(f'\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-opta\\Производственный календарь 20{today1[-2:]}.xlsx')
 
@@ -130,8 +130,9 @@ if __name__ == '__main__':
 
             if len(weekends) > 1 or cur_weekday == 'Вт':
                 logger.info('sleeping')
-                while int(datetime.datetime.now().hour) < 15:
-                    sleep(300)
+                # * Uncomment
+                # while int(datetime.datetime.now().hour) < 15:
+                #     sleep(300)
                 logger.info('sleeped')
             #     logger.info(weekends)
             # logger.info(weekends)
@@ -205,7 +206,7 @@ if __name__ == '__main__':
                             filepath = homebank(homebank_login, homebank_password, days[0], days[-1])
                             break
 
-                    check_homebank_and_collection(filepath, main_file, bonuses)
+                    check_homebank_and_collection(filepath, main_file)
                     Path(filepath).unlink()
 
                     # * ----- 4 -----
@@ -215,7 +216,7 @@ if __name__ == '__main__':
                         if True:
                             all_days = odines_part(days)
 
-                            odines_check_with_collection(all_days, main_file, bonuses)
+                            odines_check_with_collection(all_days, main_file)
                             break
 
                         # except Exception as err:
@@ -228,7 +229,7 @@ if __name__ == '__main__':
 
                     for tries in range(5):
                         with suppress(Exception):
-                            ofd_distributor(main_file, bonuses)
+                            ofd_distributor(main_file)
                             break
 
                     # smtp_send(fr"""Добрый день!
