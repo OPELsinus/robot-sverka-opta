@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 
 from pywinauto import keyboard
 
-from config import logger, ecp_paths, mapping_path
+from config import logger, ecp_paths, mapping_path, oofd_trans_url, kazakhtelekom_url
 from tools.app import App
 from tools.web import Web
 from utils.check_time_diff import check_time_diff
@@ -138,7 +138,7 @@ def open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign, coun
     web = Web()
 
     web.run()
-    web.get('https://ofd1.kz/login')
+    web.get(oofd_trans_url)
 
     web.find_element('//*[@id="login_by_cert_btn"]').click()
     sign_ecp_trans(ecp_auth)
@@ -197,7 +197,7 @@ def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_si
     web = Web()
 
     web.run()
-    web.get('https://org.oofd.kz/#/landing/eds-login')
+    web.get(kazakhtelekom_url)
 
     if web.wait_element("//button[contains(text(), 'kz')]", timeout=10):
         web.find_element("//button[contains(text(), 'kz')]").click()

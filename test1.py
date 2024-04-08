@@ -1,6 +1,7 @@
 import datetime
 import os
 import shutil
+import traceback
 from contextlib import suppress
 from copy import copy
 from pathlib import Path
@@ -9,7 +10,7 @@ from time import sleep
 import pandas as pd
 from openpyxl import load_workbook
 
-from config import tg_token, chat_id, logger, ecp_paths, template_path, owa_username, owa_password, months_normal, saving_path, smtp_host, smtp_author, homebank_login, homebank_password, ip_address
+from config import tg_token, chat_id, logger, ecp_paths, template_path, owa_username, owa_password, months_normal, saving_path, smtp_host, smtp_author, homebank_login, homebank_password, ip_address, email_to
 from tools.net_use import net_use
 from tools.smtp import smtp_send
 from tools.tg import tg_send
@@ -129,26 +130,26 @@ if __name__ == '__main__':
         #     rng_day = 15
         # if month == 12:
         #     rng_day = 7
-        month = 1
-        for days in range(20, 31):
+        month = 2
+        for days in range(1):
 
             today = datetime.datetime.today().strftime('%d.%m.%Y')
             today1 = datetime.datetime.today().strftime('%d.%m.%y')
 
-            if days < 10:
-                if month < 10:
-                    today = f'0{days}.0{month}.2024'
-                    today1 = f'0{days}.0{month}.24'
-                else:
-                    today = f'0{days}.{month}.2024'
-                    today1 = f'0{days}.{month}.24'
-            else:
-                if month < 10:
-                    today = f'{days}.0{month}.2024'
-                    today1 = f'{days}.0{month}.24'
-                else:
-                    today = f'{days}.{month}.2024'
-                    today1 = f'{days}.{month}.24'
+            # if days < 10:
+            #     if month < 10:
+            #         today = f'0{days}.0{month}.2024'
+            #         today1 = f'0{days}.0{month}.24'
+            #     else:
+            #         today = f'0{days}.{month}.2024'
+            #         today1 = f'0{days}.{month}.24'
+            # else:
+            #     if month < 10:
+            #         today = f'{days}.0{month}.2024'
+            #         today1 = f'{days}.0{month}.24'
+            #     else:
+            #         today = f'{days}.{month}.2024'
+            #         today1 = f'{days}.{month}.24'
 
             calendar = pd.read_excel(f'\\\\172.16.8.87\\d\\.rpa\\.agent\\robot-sverka-opta\\Производственный календарь 20{today1[-2:]}.xlsx')
             print(calendar[calendar['Day'] == today1])
@@ -168,8 +169,9 @@ if __name__ == '__main__':
 
                     weekends.append(calendar['Day'].iloc[i][:6] + '20' + calendar['Day'].iloc[i][-2:])
 
-                #     logger.info(weekends)
                 # logger.info(weekends)
+                # logger.info(weekends)
+
                 logger.info('Start day', today)
                 logger.info(weekends)
                 for day in weekends[::-1]:
@@ -222,13 +224,13 @@ if __name__ == '__main__':
                         if filepath == '':
                             smtp_send(fr"""Добрый день!
                             Сверка ОПТа за {today} завершилась - Пусто в Розничных чеках""",
-                                      to=['Abdykarim.D@magnum.kz'],
+                                      to=email_to,
                                       subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
                             logger.warning(f'Законичили отработку за {today} - Пусто в Розничных чеках')
                             continue
 
                         # ! Uncomment, if you are compiling for the virtual machines
-                        # filepath = filepath.replace('Documents', 'Downloads')
+                        filepath = filepath.replace('Documents', 'Downloads')
 
                         # main_file = r'\\vault.magnum.local\Common\Stuff\_06_Бухгалтерия\Для робота\Процесс Сверка ОПТа\Файл сбора Декабрь 2023.xlsx'
                         # bonuses = []
@@ -259,33 +261,35 @@ if __name__ == '__main__':
                         logger.info('Начали 1C')
 
                         for tries in range(5):
-                            if True:
+                            try:
                                 all_days = odines_part(days_)
 
                                 odines_check_with_collection(all_days, days_, main_file)
                                 break
 
-                            # except Exception as err:
-                            #     print("ERROR 1C:", err)
-                            #     logger.warning(f"ERROR OCCURED 1C: {err}")
+                            except Exception as err:
+                                print("ERROR 1C:", err)
+                                logger.warning(f"ERROR OCCURED 1C: {err}")
+                                traceback.print_exc()
 
                         # * ----- 5 -----
                         logger.warning('Начали ОФД')
                         logger.info('Начали ОФД')
-                        # bonuses = [22977, 31987, 0, 0, 0, 0, 0, 11280, 0, 0, 0, 0, 0, 0, 0]
+
                         for tries in range(5):
                             try:
                                 ofd_distributor(main_file)
+                                break
                             except Exception as err1:
                                 logger.warning(f"ERROR OCCURED HERE OFD: {err1}")
-                                sleep(1000)
+                                traceback.print_exc()
 
                         logger.warning(f'Законичили отработку за {today}')
                         logger.info(f'Законичили отработку за {today}')
 
                         smtp_send(fr"""Добрый день!
                                        Сверка ОПТа за {today} завершилась успешно, файл сбора лежит в папке {main_file}""",
-                                  to=['Abdykarim.D@magnum.kz'],
+                                  to=email_to,
                                   subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
                         # , 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'
 
@@ -296,6 +300,7 @@ if __name__ == '__main__':
                     print(1)
 
     except Exception as main_error:
-        print(f'MAIN ERROR OCCURED: {main_error}')
+        traceback.print_exc()
+        print(f'MAIN ERROR OCCURED: {main_error} ||| {traceback.format_exc()}')
         logger.info(f'MAIN ERROR OCCURED: {main_error}')
         logger.warning(f'MAIN ERROR OCCURED: {main_error}')

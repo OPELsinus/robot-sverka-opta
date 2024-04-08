@@ -78,7 +78,7 @@ def homebank(email, password, start_date, end_date):
     logger.info('clicked downloading')
     filepath = None
     found = False
-    while True:
+    for _ in range(150):
         for file in os.listdir(download_path):
             if 'magnumopt' in file and '$' not in file and '.crdownload' not in file:
                 filepath = os.path.join(download_path, file)
@@ -86,6 +86,8 @@ def homebank(email, password, start_date, end_date):
                 break
         if found:
             break
+
+        sleep(1)
 
     return filepath
 
@@ -96,13 +98,18 @@ def check_homebank_and_collection(filepath_, main_file):
 
     collection_sheet = collection_file['Файл сбора']
 
-    df = pd.read_excel(filepath_)
-
-    df.columns = df.iloc[10]
     count = 0
     for row in range(3, collection_sheet.max_row + 1):
 
         if collection_sheet[f'E{row}'].value is not None:
+            continue
+
+        try:
+            df = pd.read_excel(filepath_)
+
+            df.columns = df.iloc[10]
+        except:
+            collection_sheet[f'E{row}'].value = 'нет'
             continue
 
         try:

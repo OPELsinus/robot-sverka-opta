@@ -95,10 +95,13 @@ mapping_path = config_data['mapping_path']
 homebank_login = config_data['homebank_login']
 homebank_password = config_data['homebank_password']
 ecp_paths = config_data['ecp_paths']
-
+oofd_trans_url = config_data['oofd_trans_url']
+kazakhtelekom_url = config_data['kazakhtelekom_url']
+email_to = config_data['email_to']
+process_day = config_data['process_day']
 
 log_path = project_path.joinpath(f'{sys.argv[1]}.log' if len(sys.argv) > 1 else 'dev.log')
-logger = init_logger(tg_token=tg_token, chat_id=chat_id, log_path=log_path, level=30)
+logger = init_logger(tg_token=tg_token, chat_id=chat_id, log_path=log_path)
 
 months = [
     'января',

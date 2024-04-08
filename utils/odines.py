@@ -21,7 +21,7 @@ def odines_part(days):
                                  "control_type": "Window", "visible_only": True, "enabled_only": True,
                                  "found_index": 0}
 
-    path = r'C:\Program Files\1cv8\8.3.13.1644\bin\1cv8.exe' if ip_address == '172.20.1.24' else r'C:\Program Files\1cv8\common\1cestart.exe'
+    path = r'C:\Program Files\1cv8\8.3.13.1644\bin\1cv8.exe'  # if ip_address == '172.20.1.24' else r'C:\Program Files\1cv8\common\1cestart.exe'
     app = Odines(path)
     app.run()
 
@@ -188,6 +188,7 @@ def odines_part(days):
 
 
 def odines_check_with_collection(all_days_, days, main_file):
+
     logger.warning('Started checking 1C')
     collection_file = load_workbook(main_file)
 
