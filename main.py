@@ -214,7 +214,7 @@ if __name__ == '__main__':
 
                     # tg_send(f'Робот запустился - <b>{today}</b>\n\nДата для выгрузки чеков из Спрута - <b>{cashbook_day}</b>\n\nДата проверки в 1С - <b>{days}</b>', bot_token=tg_token, chat_id=chat_id)
 
-                    if True:
+                    try:
 
                         logger.warning(f'Начали отработку за {today} | {today1}')
                         # * ----- 1 -----
@@ -231,12 +231,12 @@ if __name__ == '__main__':
                                       to=email_to,
                                       subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
                             logger.warning(f'Законичили отработку за {today} - Пусто в Розничных чеках')
-                            continue
+                        #     continue
 
-                        # ! Uncomment, if you are compiling for the virtual machines
+                        # # ! Uncomment, if you are compiling for the virtual machines
                         filepath = filepath.replace('Documents', 'Downloads')
 
-                        # main_file = r'\\vault.magnum.local\Common\Stuff\_06_Бухгалтерия\Для робота\Процесс Сверка ОПТа\Файл сбора Декабрь 2023.xlsx'
+                        # main_file = r'\\vault.magnum.local\Common\Stuff\_06_Бухгалтерия\Для робота\Процесс Сверка ОПТа\Файл сбора Апрель 2024.xlsx'
                         # bonuses = []
                         # filepath = r'C:\Users\Abdykarim.D\Downloads\magnumopt_2023-09-02_2023-09-03.xlsx'
                         # * ----- 2 -----
@@ -297,9 +297,10 @@ if __name__ == '__main__':
                                   subject=f'Сверка ОПТа за {today}', username=smtp_author, url=smtp_host)
                         # , 'Sagimbayeva@magnum.kz', 'Ashirbayeva@magnum.kz'
 
-                        # except Exception as err:
-                    #     logger.info(f'ERRROR!!!, {err}')
-                    #     logger.warning(f'ERRROR!!!, {err}')
+                    except Exception as err:
+                        traceback.print_exc()
+                        logger.info(f'ERRROR!!!, {err}')
+                        logger.warning(f'ERRROR!!!, {err}')
                 else:
                     print(1)
 

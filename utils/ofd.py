@@ -1,5 +1,6 @@
 import datetime
 import os
+import traceback
 from contextlib import suppress
 from time import sleep
 
@@ -89,6 +90,8 @@ def ofd_distributor(main_file):
         seacrh_date = collection_sheet[f'B{row}'].value
         collection_sheet[f'G{row}'].value = 'нет'
         print(f"{row} | {collection_sheet[f'A{row}'].value}")
+        if collection_sheet[f'A{row}'].value == 'Алматинский филиал №14 ТОО "Magnum Cash&Carry"':
+            continue
         short_name = mapping_file[mapping_file['Наименование в Спруте'].str.lower() == collection_sheet[f'A{row}'].value.lower()]['Филиал'].iloc[0]
         ecp_path = mapping_file[mapping_file['Наименование в Спруте'].str.lower() == collection_sheet[f'A{row}'].value.lower()]['Площадка в Спруте'].iloc[0]
 
@@ -113,6 +116,7 @@ def ofd_distributor(main_file):
             try:
                 open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign, count)
             except:
+                traceback.print_exc()
                 logger.warning(f'FAILED OFD at {seacrh_date}, {row}, {ecp_auth}')
                 raise Exception('FAILED OFD')
             count += 1
@@ -123,6 +127,7 @@ def ofd_distributor(main_file):
             try:
                 open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign, count)
             except:
+                traceback.print_exc()
                 logger.warning(f'FAILED OFD at {seacrh_date}, {row}, {ecp_auth}')
                 raise Exception('FAILED OFD')
             count += 1
@@ -194,43 +199,50 @@ def open_oofd_trans(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign, coun
 
 def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_sign, count):
 
-    web = Web()
+    while True:
 
-    web.run()
-    web.get(kazakhtelekom_url)
+        web = Web()
 
-    if web.wait_element("//button[contains(text(), 'kz')]", timeout=10):
-        web.find_element("//button[contains(text(), 'kz')]").click()
-        web.execute_script_click_xpath_selector("//div[contains(text(), 'RU')]")
+        web.run()
 
-    web.find_element("//button[contains(text(), 'Войти с ЭЦП')]").click()
+        web.get(kazakhtelekom_url)
 
-    web.find_element('//*[@id="storage-password"]').type_keys('Aa123456')
-    web.execute_script_click_xpath_selector('//*[@id="storage-type"]/div/div[2]/div/p[2]/span')
-    sleep(2)
+        if web.wait_element("//button[contains(text(), 'kz')]", timeout=10):
+            web.find_element("//button[contains(text(), 'kz')]").click()
+            web.execute_script_click_xpath_selector("//div[contains(text(), 'RU')]")
 
-    sign_ecp_kt(ecp_auth)
+        web.find_element("//button[contains(text(), 'Войти с ЭЦП')]").click()
 
-    sleep(3)
-    if web.wait_element("//button[contains(text(), 'Проверить')]", timeout=5):
-        web.find_element("//button[contains(text(), 'Проверить')]").click()
+        web.find_element('//*[@id="storage-password"]').type_keys('Aa123456')
+        web.execute_script_click_xpath_selector('//*[@id="storage-type"]/div/div[2]/div/p[2]/span')
+        sleep(2)
 
-    with suppress(Exception):
+        sign_ecp_kt(ecp_auth)
 
-        app = App('')
+        sleep(3)
+        if web.wait_element("//button[contains(text(), 'Проверить')]", timeout=5):
+            web.find_element("//button[contains(text(), 'Проверить')]").click()
 
-        app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
-                          "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=15).type_keys('Aa123456', app.keys.ENTER)
+        with suppress(Exception):
 
-        sleep(1)
+            app = App('')
 
-        app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
-                          "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=10).type_keys('Aa123456', app.keys.ENTER)
-        app = None
+            app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
+                              "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=15).type_keys('Aa123456', app.keys.ENTER)
+
+            sleep(1)
+
+            app.find_element({"title": "Ввод пароля", "class_name": "SunAwtDialog", "control_type": "Window",
+                              "visible_only": True, "enabled_only": True, "found_index": 0}, timeout=10).type_keys('Aa123456', app.keys.ENTER)
+            app = None
+
+        if not web.wait_element("//span[contains(text(), 'Что-то пошло не так')]", timeout=5):
+            break
+        web.quit()
 
     web.find_element("//input[contains(@placeholder, 'Магазин, касса')]", timeout=150).type_keys(str(collection_sheet[f'K{row}'].value).replace(' ', ''), web.keys.ENTER)  # Filling serial number
     sleep(5)
-    web.find_element("(//a[@class='kkm'])[1]").click()  # Find & click on the first element
+    web.find_element("(//a[contains(@class, 'kkm')])[1]").click()  # Find & click on the first element
     # sleep(100)
     logger.info(f"{seacrh_date} {seacrh_date.split('.')}")
 
@@ -251,7 +263,7 @@ def open_oofd_kazakhtelekom(seacrh_date, collection_sheet, row, ecp_auth, ecp_si
     print('New url:', new_url)
     web.get(new_url)
     web.get(new_url)
-    web.driver.refresh() # Обновляем, чтобы данные точно прогрузились
+    web.driver.refresh()  # Обновляем, чтобы данные точно прогрузились
 
     # web.find_element("//input[contains(@placeholder, 'Фискальный признак чека')]").type_keys(str(collection_sheet[f'K{row}'].value).replace(' ', ''), web.keys.ENTER)  # Filling serial number
 
